@@ -8,8 +8,8 @@ export default function InteractiveMap({
   selectedLocation = null,
   onLocationSelect = null,
   onSelectIssue = null,
-  center = [40.7180, -74.0020],
-  zoom = 13,
+  center = [12.9092, 77.5666],
+  zoom = 14,
   height = '100%'
 }) {
   const mapContainerRef = useRef(null);
