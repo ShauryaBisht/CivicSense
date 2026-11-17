@@ -2,17 +2,17 @@ export const INITIAL_ISSUES = [
   {
     id: "issue-1",
     ticketId: "#CIVIC-8492",
-    title: "Deep Crater Pothole Damaging Car Suspensions",
-    description: "Substantial pothole near the intersection of Elm Street and 4th Avenue. Multiple vehicles have suffered punctured tires and rim damage. It is over 8 inches deep and exposes broken asphalt aggregate.",
+    title: "Deep Crater Pothole Damaging Car Suspensions & Two-Wheelers",
+    description: "Substantial pothole near Sony World signal on 80 Feet Road. Multiple two-wheeler riders and auto rickshaws have suffered wheel rim damage and near-falls. Exposed gravel and broken asphalt aggregate.",
     category: "Infrastructure",
     urgency: "High",
     status: "In Progress",
     location: {
-      lat: 40.7128,
-      lng: -74.0060,
-      address: "142 Elm St, Downtown West",
-      neighborhood: "Downtown District",
-      landmark: "Opposite Metro Supermarket"
+      lat: 12.9352,
+      lng: 77.6245,
+      address: "80 Feet Road, 5th Block, Koramangala",
+      neighborhood: "Koramangala",
+      landmark: "Near Sony World Signal Junction"
     },
     mediaUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=900&q=80",
@@ -20,17 +20,17 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-10-01T09:30:00Z",
     updatedAt: "2026-10-02T14:15:00Z",
     reporter: {
-      name: "Marcus Vance",
-      contact: "marcus.v@example.com",
+      name: "Rahul Sharma",
+      contact: "rahul.sharma@example.com",
       isAnonymous: false
     },
     upvotes: 47,
     hasUpvoted: false,
-    department: "Department of Public Works",
+    department: "BBMP Road Infrastructure",
     assignedTeam: {
-      name: "Asphalt Rapid Response Crew #3",
-      leadWorker: "Supervisor Dave Miller",
-      contactNumber: "+1 (555) 438-9921"
+      name: "BBMP Ward 151 Road Repair Crew",
+      leadWorker: "AEE Suresh Gowda",
+      contactNumber: "+91 98450 49921"
     },
     eta: "Today by 4:00 PM",
     timeline: [
@@ -39,17 +39,17 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-10-01T09:30:00Z",
         title: "Issue Reported by Citizen",
-        description: "Citizen logged initial report with photos and GPS pin.",
-        actor: "Marcus Vance",
+        description: "Citizen logged pothole report with photos and GPS pin in Koramangala.",
+        actor: "Rahul Sharma",
         role: "Citizen"
       },
       {
         id: "t1-2",
         status: "Under Review",
         timestamp: "2026-10-01T11:00:00Z",
-        title: "Triage & AI Severity Verification",
-        description: "AI flagged high hazard rating due to vehicular traffic volume. Triage officer approved inspection order.",
-        actor: "Civic AI Dispatcher",
+        title: "BBMP Triage Inspection",
+        description: "Ward engineer verified heavy traffic volume on 80 Feet Road. Work order sanctioned.",
+        actor: "BBMP Control Room",
         role: "Municipal System"
       },
       {
@@ -57,57 +57,56 @@ export const INITIAL_ISSUES = [
         status: "Assigned",
         timestamp: "2026-10-02T08:30:00Z",
         title: "Work Order Dispatched",
-        description: "Assigned to Asphalt Rapid Response Crew #3 with steam roller and cold-patch supply.",
-        actor: "Central Ops Coordinator",
+        description: "Assigned to BBMP Ward 151 Asphalt Rapid Crew with hot-mix supply.",
+        actor: "AEE South Zone",
         role: "Department Head"
       },
       {
         id: "t1-4",
         status: "In Progress",
         timestamp: "2026-10-02T14:15:00Z",
-        title: "Roadwork Commenced",
-        description: "Traffic cones placed, milling machine grinding damaged perimeter.",
-        actor: "Supervisor Dave Miller",
+        title: "Road Patchwork Commenced",
+        description: "Traffic barricades placed, surface milling underway.",
+        actor: "AEE Suresh Gowda",
         role: "Field Team"
       }
     ],
     comments: [
       {
         id: "c1-1",
-        author: "Sarah Lin",
+        author: "Kavitha R.",
         avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-10-01T12:45:00Z",
-        content: "Nearly ruined my wheel here yesterday! Thanks for reporting this, Marcus."
+        content: "Nearly took a fall on my scooter here yesterday! Thanks for reporting, Rahul."
       },
       {
         id: "c1-2",
-        author: "Municipal Works Dispatch",
+        author: "BBMP Works Desk",
         avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-10-02T08:35:00Z",
-        content: "Crew #3 is on schedule with hot-mix asphalt. Lane 1 will have minor diversion until 4 PM.",
-        isOfficial: true
+        content: "Asphalt patch truck dispatched. One lane diverted temporarily until 4 PM."
       }
     ],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 96,
       detectedKeywords: ["pothole", "punctured tires", "suspensions", "broken asphalt", "crater"],
-      reasoning: "High traffic street hazard detected. Priority elevated due to vehicular damage risk."
+      reasoning: "High traffic street hazard detected on Koramangala arterial road."
     }
   },
   {
     id: "issue-2",
     ticketId: "#CIVIC-8501",
-    title: "Burst Water Main Flooding Residential Crossroads",
-    description: "High-pressure clean water geyser bubbling up through sidewalk pavers. The water has flooded the entire pedestrian crossing and is leaking toward basement entryways.",
+    title: "Burst BWSSB Water Pipe Flooding Road & Pedestrian Footpath",
+    description: "High-pressure clean water supply pipeline ruptured beneath pavement slabs. Water has flooded the crosswalk and is leaking toward shop basements near Indiranagar metro.",
     category: "Water & Drainage",
     urgency: "Emergency",
     status: "Assigned",
     location: {
-      lat: 40.7180,
-      lng: -74.0010,
-      address: "88 Grand Street & Mercer Way",
-      neighborhood: "SoHo Commons",
-      landmark: "Beside Community Library"
+      lat: 12.9719,
+      lng: 77.6412,
+      address: "100 Feet Road, near 12th Main Junction",
+      neighborhood: "Indiranagar",
+      landmark: "Near Indiranagar Metro Station"
     },
     mediaUrl: "https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=900&q=80",
@@ -115,17 +114,17 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-10-02T06:10:00Z",
     updatedAt: "2026-10-02T07:05:00Z",
     reporter: {
-      name: "Elena Rostova",
-      contact: "elena.r@example.com",
+      name: "Ananya Rao",
+      contact: "ananya.rao@example.com",
       isAnonymous: false
     },
     upvotes: 68,
     hasUpvoted: true,
-    department: "Water & Sewer Authority",
+    department: "BWSSB (Water Supply & Sewerage)",
     assignedTeam: {
-      name: "Emergency Hydraulics Unit A",
-      leadWorker: "Chief Engineer Carlos Diaz",
-      contactNumber: "+1 (555) 302-8819"
+      name: "BWSSB East Division Hydraulics Unit",
+      leadWorker: "Executive Engineer Ramesh Kumar",
+      contactNumber: "+91 99001 38819"
     },
     eta: "Emergency Team ETA: 25 mins",
     timeline: [
@@ -133,59 +132,59 @@ export const INITIAL_ISSUES = [
         id: "t2-1",
         status: "Submitted",
         timestamp: "2026-10-02T06:10:00Z",
-        title: "Emergency Water Alert Filed",
-        description: "Reported flooding near residential basements.",
-        actor: "Elena Rostova",
+        title: "Emergency Water Leak Logged",
+        description: "Reported flooding near Indiranagar commercial shops.",
+        actor: "Ananya Rao",
         role: "Citizen"
       },
       {
         id: "t2-2",
         status: "Under Review",
         timestamp: "2026-10-02T06:18:00Z",
-        title: "Automated Emergency Escalation",
-        description: "AI triggered code Crimson for structural flooding danger.",
-        actor: "Civic AI Dispatcher",
+        title: "BWSSB Control Room Escalation",
+        description: "Triggered emergency alert for main line shut-off valve.",
+        actor: "BWSSB Hotline",
         role: "Municipal System"
       },
       {
         id: "t2-3",
         status: "Assigned",
         timestamp: "2026-10-02T07:05:00Z",
-        title: "Shut-Off Crew Dispatched",
-        description: "Hydraulics Unit A dispatched with isolation valve blueprints.",
-        actor: "Water Authority Central Control",
+        title: "Line Shut-Off Crew Dispatched",
+        description: "Hydraulics Unit dispatched with isolation valve keys.",
+        actor: "BWSSB Central Control",
         role: "Department Head"
       }
     ],
     comments: [
       {
         id: "c2-1",
-        author: "David Kim",
+        author: "Karthik V.",
         avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-10-02T06:30:00Z",
-        content: "Water pressure in our building just dropped completely. Please hurry!"
+        content: "Water pressure in 12th Main buildings has dropped completely. Please fix urgently!"
       }
     ],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 99,
       detectedKeywords: ["burst water main", "geyser", "flooding", "basement", "high-pressure"],
-      reasoning: "Emergency water loss and flood threat to private property triggers immediate dispatch."
+      reasoning: "Potable water loss and flooding hazard in high density commercial zone."
     }
   },
   {
     id: "issue-3",
     ticketId: "#CIVIC-8340",
-    title: "Overflowing Commercial Trash Bins Attracting Rodents",
-    description: "Sanitation bins behind the shopping alleyway have not been emptied in 5 days. Garbage bags are piled 5 feet high, spilling onto pedestrian walk and attracting strays and pests.",
+    title: "Overflowing Garbage Blackspot Attracting Stray Animals",
+    description: "Public roadside waste collection point in Sector 1 has not been cleared for 4 days. Wet waste spilling onto sidewalk, attracting strays and creating severe odor for nearby residents.",
     category: "Sanitation",
     urgency: "Medium",
     status: "Resolved",
     location: {
-      lat: 40.7250,
-      lng: -74.0090,
-      address: "310 Washington Plaza",
-      neighborhood: "Market District",
-      landmark: "Behind Central Farmers Market"
+      lat: 12.9116,
+      lng: 77.6389,
+      address: "27th Main Road, Sector 1, HSR Layout",
+      neighborhood: "HSR Layout",
+      landmark: "Behind BDA Complex HSR Layout"
     },
     mediaUrl: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=900&q=80",
@@ -199,11 +198,11 @@ export const INITIAL_ISSUES = [
     },
     upvotes: 34,
     hasUpvoted: false,
-    department: "Department of Sanitation",
+    department: "BBMP Solid Waste Management (SWM)",
     assignedTeam: {
-      name: "Heavy Waste Compactor Squad 12",
-      leadWorker: "Officer Ray Reynolds",
-      contactNumber: "+1 (555) 778-1200"
+      name: "HSR Sector 1 Auto Tipper & Sanitation Squad",
+      leadWorker: "Health Inspector Ravi Shankar",
+      contactNumber: "+91 94480 71200"
     },
     eta: "Completed",
     timeline: [
@@ -212,7 +211,7 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-09-28T14:00:00Z",
         title: "Report Submitted",
-        description: "Citizen reported overflow and health hazard.",
+        description: "Citizen reported garbage accumulation and health hazard.",
         actor: "Priya Patel",
         role: "Citizen"
       },
@@ -220,18 +219,18 @@ export const INITIAL_ISSUES = [
         id: "t3-2",
         status: "Assigned",
         timestamp: "2026-09-29T08:00:00Z",
-        title: "Sanitation Route Adjusted",
-        description: "Scheduled for morning priority route pickup.",
-        actor: "Sanitation Logistics",
+        title: "Compactor Route Scheduled",
+        description: "Scheduled for morning priority compactor truck clearance.",
+        actor: "BBMP SWM Logistics",
         role: "Department Head"
       },
       {
         id: "t3-3",
         status: "In Progress",
         timestamp: "2026-09-29T14:15:00Z",
-        title: "Cleanup Underway",
-        description: "Compactor truck on site. Pressure wash sanitized area.",
-        actor: "Officer Ray Reynolds",
+        title: "Waste Cleared and Area Bleached",
+        description: "Compactor truck on site. Lime powder sprayed.",
+        actor: "Inspector Ravi Shankar",
         role: "Field Team"
       },
       {
@@ -239,48 +238,48 @@ export const INITIAL_ISSUES = [
         status: "Resolved",
         timestamp: "2026-09-29T16:30:00Z",
         title: "Site Cleared and Sanitized",
-        description: "All waste hauled away. Replacement heavy-duty bins installed.",
-        actor: "Officer Ray Reynolds",
+        description: "Blackspot cleared, waste hauled to processing plant, dustbins repositioned.",
+        actor: "Inspector Ravi Shankar",
         role: "Field Team"
       }
     ],
     comments: [
       {
         id: "c3-1",
-        author: "Ray Reynolds (Sanitation Lead)",
+        author: "Ravi Shankar (BBMP SWM)",
         avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-09-29T16:35:00Z",
-        content: "Alley is fully cleared, pressure-washed, and equipped with lockable lid bins.",
+        content: "Spot completely cleared and disinfected with bleaching powder. Residents requested not to dump after 10 AM.",
         isOfficial: true
       }
     ],
     feedback: {
       rating: 5,
-      feedbackText: "Super fast response! Alley is sparkling clean and smells fresh now.",
+      feedbackText: "Super fast response from BBMP team! Area is fully cleared and clean.",
       isResolvedConfirmed: true,
       citizenName: "Priya Patel",
       timestamp: "2026-09-29T18:00:00Z"
     },
-    aiMetadata: {
+    triageMetadata: {
       confidence: 94,
       detectedKeywords: ["trash bins", "overflowing", "garbage bags", "rodents", "spilling"],
-      reasoning: "Classified as Sanitation issue. Public health risk classified as Medium priority."
+      reasoning: "Classified as BBMP SWM sanitation request. Medium urgency."
     }
   },
   {
     id: "issue-4",
     ticketId: "#CIVIC-8519",
-    title: "Broken Streetlight & Exposed Wiring Near Elementary School",
-    description: "Streetlight #ST-402 pole knocked by delivery truck. Base cover is missing, revealing exposed live wires at child eye-level. Total darkness at night along the crosswalk.",
+    title: "BESCOM Electric Pole Knocked Down With Dangling Live Wires",
+    description: "Streetlight electric pole knocked by delivery truck near Hope Farm junction. Base cover missing, revealing exposed live wires at eye-level. Total darkness at night along pedestrian crossing near school.",
     category: "Electrical",
     urgency: "Emergency",
     status: "Under Review",
     location: {
-      lat: 40.7090,
-      lng: -74.0150,
-      address: "52 Battery Place",
-      neighborhood: "Waterfront District",
-      landmark: "Near PS 89 Elementary Entrance"
+      lat: 12.9860,
+      lng: 77.7340,
+      address: "ITPL Main Road, Hope Farm Junction",
+      neighborhood: "Whitefield",
+      landmark: "Near Whitefield Post Office & School"
     },
     mediaUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
@@ -288,17 +287,17 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-10-02T19:40:00Z",
     updatedAt: "2026-10-02T20:10:00Z",
     reporter: {
-      name: "Arthur Jenkins",
-      contact: "arthur.j@example.com",
+      name: "Karthik Venkatesh",
+      contact: "karthik.v@example.com",
       isAnonymous: false
     },
     upvotes: 82,
     hasUpvoted: true,
-    department: "Bureau of Electrical Grid & Lighting",
+    department: "BESCOM (Electricity Supply & Streetlights)",
     assignedTeam: {
-      name: "Grid Safety Unit 07",
-      leadWorker: "Lineman Scott Peterson",
-      contactNumber: "+1 (555) 901-4432"
+      name: "BESCOM Whitefield Substation Emergency Crew",
+      leadWorker: "Lineman Manjunath B.",
+      contactNumber: "+91 98860 94432"
     },
     eta: "Under Immediate Dispatch",
     timeline: [
@@ -307,49 +306,49 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-10-02T19:40:00Z",
         title: "Emergency Hazard Reported",
-        description: "Citizen reported exposed live wires near school crosswalk.",
-        actor: "Arthur Jenkins",
+        description: "Citizen reported exposed live electric wires near school crossing.",
+        actor: "Karthik Venkatesh",
         role: "Citizen"
       },
       {
         id: "t4-2",
         status: "Under Review",
         timestamp: "2026-10-02T20:10:00Z",
-        title: "Emergency Safety Protocol Triggered",
-        description: "Priority escalated to Emergency. Field safety beacon illuminated.",
-        actor: "Civic Safety Sentinel",
+        title: "BESCOM 1912 Emergency Alert Dispatched",
+        description: "Priority escalated to Emergency. Lineman dispatched for power isolation.",
+        actor: "BESCOM Helpline 1912",
         role: "Municipal System"
       }
     ],
     comments: [
       {
         id: "c4-1",
-        author: "Principal Morrison",
+        author: "Prasad K.",
         avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-10-02T20:25:00Z",
-        content: "We have placed temporary yellow warning tape around the base. School starts tomorrow at 8 AM, urgent fix required!"
+        content: "We placed caution tape around the pole. School starts at 8 AM, please isolate power immediately!"
       }
     ],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 98,
       detectedKeywords: ["broken streetlight", "exposed wiring", "live wires", "elementary school", "darkness"],
-      reasoning: "Critical electrocution hazard adjacent to educational facility. Automatically marked as Emergency."
+      reasoning: "Critical electrocution hazard adjacent to school zone. Automatically flagged Emergency."
     }
   },
   {
     id: "issue-5",
     ticketId: "#CIVIC-8450",
-    title: "Storm Drain Clogged With Tree Debris Causing Street Pooling",
-    description: "Stormwater grate is completely sealed with thick autumn leaves and discarded plastic bottles. Even light rain causes 4-inch deep puddles blocking pedestrian crossing and wheelchair ramps.",
+    title: "Stormwater Drain Clogged With Silt & Plastic Causing Waterlogging",
+    description: "Side drain grate on 16th Main Road is completely choked with construction debris and single-use plastic. Even 15 minutes of rain causes knee-deep waterlogging across bus stop.",
     category: "Water & Drainage",
     urgency: "Medium",
     status: "In Progress",
     location: {
-      lat: 40.7160,
-      lng: -73.9980,
-      address: "215 Bowery & Delancey St",
-      neighborhood: "East Village Border",
-      landmark: "At accessible sidewalk ramp"
+      lat: 12.9166,
+      lng: 77.6101,
+      address: "16th Main Road, near Udupi Garden Signal",
+      neighborhood: "BTM Layout 2nd Stage",
+      landmark: "Near BTM Lake Outer Perimeter"
     },
     mediaUrl: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=80",
@@ -357,17 +356,17 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-10-01T15:20:00Z",
     updatedAt: "2026-10-02T11:00:00Z",
     reporter: {
-      name: "Hannah Cruz",
-      contact: "hannah.cruz@example.com",
+      name: "Deepa Nair",
+      contact: "deepa.nair@example.com",
       isAnonymous: false
     },
     upvotes: 29,
     hasUpvoted: false,
-    department: "Water & Sewer Authority",
+    department: "BWSSB (Water Supply & Sewerage)",
     assignedTeam: {
-      name: "Drainage Jet-Vac Crew B",
-      leadWorker: "Tech Marcus Cole",
-      contactNumber: "+1 (555) 662-3118"
+      name: "BWSSB Jetting Machine & De-silting Squad",
+      leadWorker: "Tech Raghavendra",
+      contactNumber: "+91 97410 63118"
     },
     eta: "Tomorrow by 11:00 AM",
     timeline: [
@@ -376,50 +375,50 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-10-01T15:20:00Z",
         title: "Clogged Drain Logged",
-        description: "Submitted with photos of pooling rainwater.",
-        actor: "Hannah Cruz",
+        description: "Submitted with photos of street pooling at BTM Layout bus stop.",
+        actor: "Deepa Nair",
         role: "Citizen"
       },
       {
         id: "t5-2",
         status: "Under Review",
         timestamp: "2026-10-01T18:00:00Z",
-        title: "Classified for Hydro-Cleaning",
-        description: "Scheduled for high-pressure suction clearing.",
-        actor: "Drainage Maintenance Board",
+        title: "Sanctioned for High Pressure Jetting",
+        description: "Scheduled for suction machine deployment.",
+        actor: "BBMP Stormwater Cell",
         role: "Department Head"
       },
       {
         id: "t5-3",
         status: "In Progress",
         timestamp: "2026-10-02T11:00:00Z",
-        title: "Suction Truck Deployed",
-        description: "Vac-truck clearing debris line.",
-        actor: "Tech Marcus Cole",
+        title: "Suction Vehicle on Site",
+        description: "Desilting crew clearing clogged culvert.",
+        actor: "Tech Raghavendra",
         role: "Field Team"
       }
     ],
     comments: [],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 93,
       detectedKeywords: ["storm drain", "clogged", "tree debris", "pooling", "wheelchair ramp"],
-      reasoning: "Accessibility blockage and water retention risk. Medium urgency."
+      reasoning: "Accessibility blockage and water retention risk in BTM Layout."
     }
   },
   {
     id: "issue-6",
     ticketId: "#CIVIC-8290",
-    title: "Vandalized Park Playground Swing & Rusted Chain",
-    description: "Central swing set chain is severed and dangling with jagged metal links. Another toddler swing has cracked hard plastic. Children are attempting to climb damaged support arch.",
+    title: "Broken Children's Swing Chain & Damaged Slide in BBMP Park",
+    description: "Central swing set chain is severed and dangling with sharp jagged links in Madhavan Park. Toddler slide has a cracked fiberglass edge. Children attempting to climb damaged structure.",
     category: "Parks & Recreation",
     urgency: "High",
     status: "Resolved",
     location: {
-      lat: 40.7280,
-      lng: -73.9920,
-      address: "Tompkins Green Park",
-      neighborhood: "East Village",
-      landmark: "North Playfield Area"
+      lat: 12.9299,
+      lng: 77.5826,
+      address: "Madhavan Park, 10th Main, Jayanagar 3rd Block",
+      neighborhood: "Jayanagar",
+      landmark: "Children's Play Section near East Gate"
     },
     mediaUrl: "https://images.unsplash.com/photo-1575783970733-1aaedde1db74?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1575783970733-1aaedde1db74?auto=format&fit=crop&w=900&q=80",
@@ -427,17 +426,17 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-09-25T11:15:00Z",
     updatedAt: "2026-09-27T17:00:00Z",
     reporter: {
-      name: "Tanya Brooks",
-      contact: "tanya.b@example.com",
+      name: "Sneha Murthy",
+      contact: "sneha.m@example.com",
       isAnonymous: false
     },
     upvotes: 53,
     hasUpvoted: true,
-    department: "Parks & Recreation Maintenance",
+    department: "BBMP Horticulture & Parks",
     assignedTeam: {
-      name: "Playground Safety Specialists",
-      leadWorker: "Officer Liam O'Connor",
-      contactNumber: "+1 (555) 441-2390"
+      name: "Jayanagar Ward Parks Maintenance Crew",
+      leadWorker: "Officer Srinivas K.",
+      contactNumber: "+91 98455 42390"
     },
     eta: "Completed",
     timeline: [
@@ -446,75 +445,75 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-09-25T11:15:00Z",
         title: "Playground Hazard Logged",
-        description: "Severed swing chain reported.",
-        actor: "Tanya Brooks",
+        description: "Severed swing chain reported in Madhavan Park.",
+        actor: "Sneha Murthy",
         role: "Citizen"
       },
       {
         id: "t6-2",
         status: "Assigned",
         timestamp: "2026-09-26T09:00:00Z",
-        title: "Hardware Ordered",
-        description: "Commercial stainless-steel chains and safety seats requisitioned.",
-        actor: "Parks Operations",
+        title: "Replacement Hardware Ordered",
+        description: "Heavy duty zinc-plated chains and rubber seats requisitioned.",
+        actor: "BBMP Horticulture South",
         role: "Department Head"
       },
       {
         id: "t6-3",
         status: "In Progress",
         timestamp: "2026-09-27T10:00:00Z",
-        title: "Installation & Safety Testing",
-        description: "Chains replaced and load-bearing test executed.",
-        actor: "Officer Liam O'Connor",
+        title: "Welding & Installation Underway",
+        description: "Chains replaced and load-tested.",
+        actor: "Officer Srinivas K.",
         role: "Field Team"
       },
       {
         id: "t6-4",
         status: "Resolved",
         timestamp: "2026-09-27T17:00:00Z",
-        title: "Certified Safe for Use",
-        description: "New safety coated chains, heavy duty seats installed.",
-        actor: "Officer Liam O'Connor",
+        title: "Certified Safe for Kids",
+        description: "New safety coated chains and smooth slide patch installed.",
+        actor: "Officer Srinivas K.",
         role: "Field Team"
       }
     ],
     comments: [
       {
         id: "c6-1",
-        author: "Officer Liam O'Connor",
+        author: "Officer Srinivas K. (BBMP)",
         avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
         timestamp: "2026-09-27T17:05:00Z",
-        content: "Both standard swings and toddler bucket seats replaced with rubberized comfort chains. Inspected for full ASTM safety standards.",
+        content: "Swings and slides have been repaired and inspected. Safe for children to play.",
         isOfficial: true
       }
     ],
     feedback: {
       rating: 5,
-      feedbackText: "The new swings are great! My 4-year-old was so happy playing today.",
+      feedbackText: "The new swings are solid and safe. My kids are happy playing here again!",
       isResolvedConfirmed: true,
-      citizenName: "Tanya Brooks",
+      citizenName: "Sneha Murthy",
       timestamp: "2026-09-28T10:12:00Z"
     },
-    aiMetadata: {
+    triageMetadata: {
       confidence: 95,
       detectedKeywords: ["playground", "swing", "broken chain", "jagged metal", "children"],
-      reasoning: "Direct injury risk for children on municipal recreational facility."
+      reasoning: "Injury risk for children in public municipal park."
     }
   },
   {
     id: "issue-7",
     ticketId: "#CIVIC-8534",
-    title: "Broken Guardrail & Blind Spot On High-Speed Boulevard Curve",
-    description: "Guardrail damaged during recent accident is buckling into lane of traffic. Reflectors are shattered, creating a hazardous blind corner during night driving and heavy fog.",
+    title: "Crash Guardrail Bent Into Fast Lane On Outer Ring Road Flyover",
+    description: "Central median steel crash barrier crumpled into lane after midnight tempo accident near Bellandur flyover. Missing reflector studs create severe hazard during night hours.",
     category: "Public Safety",
     urgency: "High",
     status: "Submitted",
     location: {
-      lat: 40.7320,
-      lng: -74.0040,
-      address: "West Side Highway & 14th St Overpass",
-      neighborhood: "Meatpacking District",
-      landmark: "Near Northbound ramp curve"
+      lat: 12.9293,
+      lng: 77.6748,
+      address: "Outer Ring Road (ORR) Flyover, Bellandur Junction",
+      neighborhood: "Bellandur",
+      landmark: "Near Ecospace Tech Park Flyover Descent"
     },
     mediaUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=900&q=80",
@@ -527,7 +526,7 @@ export const INITIAL_ISSUES = [
     },
     upvotes: 19,
     hasUpvoted: false,
-    department: "Department of Transportation & Safety",
+    department: "Bengaluru Traffic Police & Road Safety",
     assignedTeam: null,
     eta: "Pending review",
     timeline: [
@@ -536,32 +535,32 @@ export const INITIAL_ISSUES = [
         status: "Submitted",
         timestamp: "2026-10-03T02:45:00Z",
         title: "Report Submitted via Mobile App",
-        description: "Report filed anonymously with photo capture.",
+        description: "Report filed anonymously with photo capture on ORR Bellandur.",
         actor: "Anonymous Citizen",
         role: "Citizen"
       }
     ],
     comments: [],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 92,
       detectedKeywords: ["guardrail", "accident", "blind spot", "night driving", "buckling"],
-      reasoning: "High-speed vehicular trajectory protection compromised. Immediate assessment recommended."
+      reasoning: "Flyover vehicular speed corridor with damaged median barrier."
     }
   },
   {
     id: "issue-8",
     ticketId: "#CIVIC-8540",
-    title: "Overgrown Tree Limbs Tangled in Secondary Power Cables",
-    description: "Heavy oak branch resting directly on overhead telephone and low-voltage electrical distribution lines. With upcoming windy weather forecast, there is high danger of sparking or power outage.",
+    title: "Gulmohar Tree Branch Resting on BESCOM Transformer Lines",
+    description: "Large dry gulmohar branch leaning directly on 11kV distribution line opposite Malleshwaram market. With gusty pre-monsoon winds, there is immediate risk of sparking or power outage.",
     category: "Infrastructure",
     urgency: "Medium",
     status: "Under Review",
     location: {
-      lat: 40.7220,
-      lng: -73.9850,
-      address: "630 East 6th Street",
-      neighborhood: "Alphabet City",
-      landmark: "In front of Community Garden"
+      lat: 12.9996,
+      lng: 77.5709,
+      address: "8th Cross Road, Sampige Road",
+      neighborhood: "Malleshwaram",
+      landmark: "Opposite Malleshwaram Market"
     },
     mediaUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=900&q=80",
     beforePhotoUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=900&q=80",
@@ -569,13 +568,13 @@ export const INITIAL_ISSUES = [
     reportedAt: "2026-10-03T05:15:00Z",
     updatedAt: "2026-10-03T06:00:00Z",
     reporter: {
-      name: "Julian Rivera",
-      contact: "julian.r@example.com",
+      name: "Arvind Swamy",
+      contact: "arvind.swamy@example.com",
       isAnonymous: false
     },
     upvotes: 14,
     hasUpvoted: false,
-    department: "Urban Forestry & Public Utilities",
+    department: "BBMP Forest Cell & Tree Maintenance",
     assignedTeam: null,
     eta: "Awaiting tree pruning crew schedule",
     timeline: [
@@ -583,38 +582,38 @@ export const INITIAL_ISSUES = [
         id: "t8-1",
         status: "Submitted",
         timestamp: "2026-10-03T05:15:00Z",
-        title: "Arbor Hazard Reported",
-        description: "Citizen reported branch strain on power lines.",
-        actor: "Julian Rivera",
+        title: "Tree Hazard Reported",
+        description: "Citizen reported branch strain on power lines in Malleshwaram.",
+        actor: "Arvind Swamy",
         role: "Citizen"
       },
       {
         id: "t8-2",
         status: "Under Review",
         timestamp: "2026-10-03T06:00:00Z",
-        title: "Cross-Departmental Referral",
-        description: "Forestry unit reviewing bucket truck route schedule.",
-        actor: "Municipal Dispatch",
+        title: "Referred to BBMP Forest Cell & BESCOM",
+        description: "Joint inspection scheduled for tree branch trimming with hydraulic bucket truck.",
+        actor: "BESCOM Malleshwaram",
         role: "Municipal System"
       }
     ],
     comments: [],
-    aiMetadata: {
+    triageMetadata: {
       confidence: 89,
       detectedKeywords: ["tree limbs", "power cables", "overhead", "sparking", "windy weather"],
-      reasoning: "Preventative utility hazard. Requires bucket truck arborist."
+      reasoning: "Electrical line interference by heavy vegetation."
     }
   }
 ];
 
 export const DEPARTMENTS = [
-  "Department of Public Works",
-  "Department of Sanitation",
-  "Water & Sewer Authority",
-  "Bureau of Electrical Grid & Lighting",
-  "Department of Transportation & Safety",
-  "Parks & Recreation Maintenance",
-  "Urban Forestry & Public Utilities"
+  "BBMP Road Infrastructure",
+  "BBMP Solid Waste Management (SWM)",
+  "BWSSB (Water Supply & Sewerage)",
+  "BESCOM (Electricity Supply & Streetlights)",
+  "Bengaluru Traffic Police & Road Safety",
+  "BBMP Horticulture & Parks",
+  "BBMP Forest Cell & Tree Maintenance"
 ];
 
 export const CATEGORIES = [
@@ -638,7 +637,7 @@ export const STATUSES = [
 
 export const SAMPLE_PRESET_IMAGES = [
   {
-    label: "Pothole / Road Crater",
+    label: "Pothole / Road Damage",
     category: "Infrastructure",
     url: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80"
   },
@@ -648,17 +647,17 @@ export const SAMPLE_PRESET_IMAGES = [
     url: "https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&w=800&q=80"
   },
   {
-    label: "Overflowing Garbage Bins",
+    label: "Overflowing Garbage",
     category: "Sanitation",
     url: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80"
   },
   {
-    label: "Flickering / Damaged Streetlight",
+    label: "Damaged Streetlight",
     category: "Electrical",
     url: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80"
   },
   {
-    label: "Broken Playground Equipment",
+    label: "Broken Park Equipment",
     category: "Parks & Recreation",
     url: "https://images.unsplash.com/photo-1575783970733-1aaedde1db74?auto=format&fit=crop&w=800&q=80"
   }
@@ -667,8 +666,8 @@ export const SAMPLE_PRESET_IMAGES = [
 export const INITIAL_NOTIFICATIONS = [
   {
     id: "notif-1",
-    title: "Emergency Alert Escalated",
-    message: "Live wire reported at 52 Battery Place near PS 89 (#CIVIC-8519). Grid Safety dispatched.",
+    title: "Emergency Alert Dispatched",
+    message: "Live wire reported on ITPL Main Road near Hope Farm, Whitefield (#CIVIC-8519). BESCOM emergency lineman dispatched.",
     timestamp: "10 mins ago",
     type: "high_priority",
     read: false,
@@ -676,8 +675,8 @@ export const INITIAL_NOTIFICATIONS = [
   },
   {
     id: "notif-2",
-    title: "Work Order In Progress",
-    message: "Asphalt Rapid Response Crew #3 has begun work on Elm St Pothole (#CIVIC-8492).",
+    title: "Road Repair In Progress",
+    message: "BBMP Ward 151 Road Repair Crew has started patch work on 80 Feet Road, Koramangala (#CIVIC-8492).",
     timestamp: "45 mins ago",
     type: "status_update",
     read: false,
@@ -686,7 +685,7 @@ export const INITIAL_NOTIFICATIONS = [
   {
     id: "notif-3",
     title: "Resolution Confirmed",
-    message: "Trash overflow at Washington Plaza (#CIVIC-8340) verified resolved by citizen Priya Patel.",
+    message: "Garbage blackspot on 27th Main, HSR Layout (#CIVIC-8340) verified cleared by resident Priya Patel.",
     timestamp: "Yesterday",
     type: "community",
     read: true,

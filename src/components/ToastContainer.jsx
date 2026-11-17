@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCivic } from '../context/CivicContext';
-import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useCivic();
@@ -8,41 +8,41 @@ export default function ToastContainer() {
   if (!toasts || toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">
+    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0">
       {toasts.map((toast) => {
-        let bgStyle = 'bg-slate-900 text-white border-slate-700';
+        let borderClass = 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-lg';
         let Icon = Info;
-        let iconColor = 'text-teal-400';
+        let iconColor = 'text-blue-600 dark:text-blue-400';
 
         if (toast.type === 'success') {
-          bgStyle = 'bg-teal-950/95 text-teal-100 border-teal-600/50 shadow-teal-900/30';
-          Icon = CheckCircle2;
-          iconColor = 'text-teal-400';
+          borderClass = 'border-emerald-200 dark:border-emerald-800/80 bg-emerald-50 dark:bg-slate-800 text-emerald-950 dark:text-emerald-300 shadow-emerald-950/10';
+          Icon = CheckCircle;
+          iconColor = 'text-emerald-600 dark:text-emerald-400';
         } else if (toast.type === 'warning') {
-          bgStyle = 'bg-amber-950/95 text-amber-100 border-amber-600/50 shadow-amber-900/30';
+          borderClass = 'border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-slate-800 text-amber-950 dark:text-amber-300 shadow-amber-950/10';
           Icon = AlertTriangle;
-          iconColor = 'text-amber-400';
+          iconColor = 'text-amber-600 dark:text-amber-400';
         } else if (toast.type === 'danger') {
-          bgStyle = 'bg-red-950/95 text-red-100 border-red-600/50 shadow-red-900/30';
+          borderClass = 'border-rose-200 dark:border-rose-800/80 bg-rose-50 dark:bg-slate-800 text-rose-950 dark:text-rose-300 shadow-rose-950/10';
           Icon = AlertCircle;
-          iconColor = 'text-red-400';
+          iconColor = 'text-rose-600 dark:text-rose-400';
         }
 
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-0 opacity-100 ${bgStyle}`}
+            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-md transition-all text-xs font-semibold backdrop-blur-xs ${borderClass}`}
           >
-            <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColor}`} />
-            <div className="flex-1 text-sm font-medium leading-snug">
+            <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${iconColor}`} />
+            <div className="flex-1 leading-snug">
               {toast.message}
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-white transition-colors p-0.5"
-              aria-label="Dismiss toast"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 transition-colors"
+              aria-label="Dismiss alert"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         );

@@ -8,28 +8,27 @@ import {
   Clock,
   Send,
   MessageSquare,
-  ShieldCheck,
-  CheckCircle2,
+  CheckCircle,
   AlertTriangle,
   User,
   Phone,
-  Calendar,
-  Sparkles,
+  Building,
   Share2,
   Printer,
   Star,
-  RotateCcw,
-  CheckCircle,
-  AlertCircle
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 
 export default function IssueDetailModal({ issue, onClose }) {
-  const { upvoteIssue, addComment, rateResolution, role, addToast } = useCivic();
+  const { upvoteIssue, addComment, rateResolution, role, addToast, setReceiptIssue } = useCivic();
 
   const [newComment, setNewComment] = useState('');
   const [citizenRating, setCitizenRating] = useState(5);
   const [feedbackNote, setFeedbackNote] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
 
   if (!issue) return null;
 
@@ -40,126 +39,122 @@ export default function IssueDetailModal({ issue, onClose }) {
   const handleSendComment = (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-    addComment(issue.id, newComment, 'Community Member');
+    addComment(issue.id, newComment, role === 'admin' ? 'Municipal Coordinator' : 'Local Resident');
     setNewComment('');
   };
 
   const handleShare = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
-      addToast('Ticket tracking link copied to clipboard!', 'info');
+      addToast('Ticket tracking link copied to clipboard.', 'info');
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleConfirmFix = () => {
-    rateResolution(issue.id, citizenRating, feedbackNote || 'Resolution verified by resident.', true);
-    setIsVerifying(false);
+    rateResolution(issue.id, citizenRating, feedbackNote || 'Resolution verified by citizen.', true);
+    setShowFeedbackForm(false);
   };
 
   const handleFlagPersists = () => {
     rateResolution(
       issue.id,
       1,
-      feedbackNote || 'Citizen reports issue is still present and unresolved.',
+      feedbackNote || 'Resident reports that this issue is still persisting.',
       false
     );
-    setIsVerifying(false);
+    setShowFeedbackForm(false);
   };
 
+  // Timeline statuses ordered
+  const STATUS_STEPS = ['Submitted', 'Under Review', 'Assigned', 'In Progress', 'Resolved'];
+  const currentStepIndex = STATUS_STEPS.indexOf(issue.status);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs overflow-y-auto transition-opacity">
       <div
-        className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[92vh] animate-in zoom-in-95 duration-200"
+        className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col my-auto max-h-[92vh] transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Top Bar */}
-        <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-500/40">
+        {/* Top Header Bar */}
+        <div className="p-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-blue-300 border border-slate-700">
               {issue.ticketId}
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
-                {issue.category}
-              </span>
-              <span
-                className={`text-xs font-bold px-2 py-0.5 rounded-md text-white ${
-                  isEmergency
-                    ? 'bg-red-600 animate-pulse'
-                    : isHigh
-                    ? 'bg-amber-500'
-                    : 'bg-teal-600'
-                }`}
-              >
-                {issue.urgency}
-              </span>
-            </div>
+            <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg font-medium border border-slate-700">
+              {issue.category}
+            </span>
+            <span
+              className={`text-xs px-2.5 py-1 rounded-lg font-bold ${
+                isEmergency
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : isHigh
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-slate-800 text-slate-300'
+              }`}
+            >
+              {issue.urgency} Priority
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setReceiptIssue(issue)}
+              title="Official Grievance Acknowledgement Slip"
+              className="flex items-center gap-1.5 bg-slate-800 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Receipt</span>
+            </button>
             <button
               onClick={handleShare}
-              title="Share tracking link"
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+              title="Copy share link"
+              className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <Share2 className="w-4 h-4" />
             </button>
             <button
-              onClick={handlePrint}
-              title="Print work order"
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+              onClick={() => window.print()}
+              title="Print complaint record"
+              className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+              className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 ml-1 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-6">
+        {/* Modal Content */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
+          
           {/* Title & Metadata */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
+          <div className="space-y-2 pb-3 border-b border-slate-100 dark:border-slate-700/60">
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-snug">
               {issue.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 mt-2">
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-teal-600" />
-                <span className="font-medium text-slate-700">{issue.location.address}</span> ({issue.location.neighborhood})
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <span>{issue.location.address || issue.location.neighborhood}</span>
               </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                <span>Logged {new Date(issue.reportedAt).toLocaleDateString()}</span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <span>Reported on {new Date(issue.reportedAt).toLocaleDateString()}</span>
               </span>
-              <span className="flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>By {issue.reporter?.isAnonymous ? 'Anonymous Citizen' : (issue.reporter?.name || 'Citizen')}</span>
+              <span className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <span>Filed by {issue.reporter.name}</span>
               </span>
             </div>
           </div>
 
-          {/* Before & After Interactive Slider */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Visual Evidence & Resolution Proof
-              </h3>
-              {isResolved && (
-                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Verified Completion
-                </span>
-              )}
-            </div>
+          {/* Issue Photo & Resolution Comparison */}
+          <div className="space-y-2">
             <BeforeAfterSlider
               beforeUrl={issue.beforePhotoUrl || issue.mediaUrl}
               afterUrl={issue.afterPhotoUrl}
@@ -167,294 +162,286 @@ export default function IssueDetailModal({ issue, onClose }) {
             />
           </div>
 
-          {/* Description & AI Diagnostic Box */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Report Description
-              </h3>
-              <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                {issue.description}
-              </p>
-
-              {/* Endorse Action Bar */}
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={() => upvoteIssue(issue.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm ${
-                    issue.hasUpvoted
-                      ? 'bg-teal-600 text-white shadow-teal-600/30'
-                      : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
-                  }`}
-                >
-                  <ThumbsUp className={`w-4 h-4 ${issue.hasUpvoted ? 'fill-current' : ''}`} />
-                  <span>{issue.hasUpvoted ? 'Endorsed by You' : 'Endorse Priority'}</span>
-                  <span className="bg-black/20 text-white px-2 py-0.5 rounded-full text-xs font-mono ml-1">
-                    {issue.upvotes}
-                  </span>
-                </button>
-
-                <div className="text-xs text-slate-500">
-                  {issue.upvotes > 20
-                    ? '🔥 High community engagement. Escalated to department supervisor.'
-                    : 'Upvoting signals community importance to city planners.'}
-                </div>
-              </div>
+          {/* Description Box */}
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 transition-colors">
+            <div className="font-bold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+              Citizen Description & Ground Report
             </div>
-
-            {/* Assigned Department & Field Crew Card */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Municipal Routing
-                </span>
-                <h4 className="text-sm font-bold text-slate-900 mt-1">
-                  {issue.department || 'Department of Public Works'}
-                </h4>
-
-                <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2 text-xs">
-                  {issue.assignedTeam ? (
-                    <>
-                      <div>
-                        <span className="text-slate-400">Assigned Team:</span>
-                        <p className="font-semibold text-slate-800">{issue.assignedTeam.name}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Crew Supervisor:</span>
-                        <p className="font-semibold text-slate-800">{issue.assignedTeam.leadWorker}</p>
-                      </div>
-                      {issue.assignedTeam.contactNumber && (
-                        <div className="flex items-center gap-1.5 text-teal-700 font-semibold">
-                          <Phone className="w-3 h-3" />
-                          <span>{issue.assignedTeam.contactNumber}</span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 text-[11px]">
-                      Awaiting squad dispatch by central triage coordinator.
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <span className="text-slate-400">Target ETA:</span>
-                    <p className="font-bold text-teal-700">{issue.eta || 'Within 48 hours'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {issue.aiMetadata && (
-                <div className="mt-3 pt-2 border-t border-slate-200 text-[10px] text-slate-500 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-teal-600" />
-                  <span>AI Classified ({issue.aiMetadata.confidence}% confidence)</span>
-                </div>
-              )}
-            </div>
+            <p className="text-slate-800 dark:text-slate-200 leading-relaxed text-xs sm:text-sm">
+              {issue.description}
+            </p>
           </div>
 
-          {/* Resolution Lifecycle Timeline Tracker */}
+          {/* Interactive Step-by-Step Status Progress Tracker */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Live Resolution Timeline
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm">
+              Resolution Progress Audit Pipeline
             </h3>
 
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {issue.timeline?.map((event, idx) => {
-                const isLatest = idx === issue.timeline.length - 1;
-                return (
-                  <div key={event.id || idx} className="relative group">
-                    {/* Circle beacon */}
-                    <div
-                      className={`absolute -left-6 top-1 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        isLatest
-                          ? 'border-teal-500 bg-teal-500 text-white shadow-sm ring-4 ring-teal-100'
-                          : 'border-slate-300 bg-white text-slate-500'
-                      }`}
-                    >
-                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                    </div>
+            {/* Stepper Bar */}
+            <div className="grid grid-cols-5 gap-1.5 text-center text-xs">
+              {STATUS_STEPS.map((statusName, index) => {
+                const isPassed = index <= currentStepIndex;
+                const isCurrent = index === currentStepIndex;
 
-                    <div className="bg-slate-50 hover:bg-slate-100/80 transition-colors p-3.5 rounded-xl border border-slate-200/80">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">{event.title}</span>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                            {event.role}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          {new Date(event.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {event.description}
-                      </p>
-                    </div>
+                let pillColor = 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-900/40 dark:text-slate-500 dark:border-slate-800';
+                if (isPassed) {
+                  pillColor = 'bg-blue-50 text-blue-800 border-blue-400 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-700 font-bold';
+                }
+                if (statusName === 'Resolved' && isPassed) {
+                  pillColor = 'bg-emerald-50 text-emerald-800 border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 font-bold';
+                }
+
+                return (
+                  <div key={statusName} className={`p-2 rounded-xl border transition-colors ${pillColor}`}>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Step {index + 1}</div>
+                    <div className="font-semibold truncate">{statusName}</div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Detailed Timeline Audit Log */}
+            <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3 transition-colors">
+              <div className="font-bold text-slate-700 dark:text-slate-300 text-xs">Timeline Activity Log:</div>
+              <div className="space-y-3 divide-y divide-slate-100 dark:divide-slate-800">
+                {issue.timeline?.map((item, idx) => (
+                  <div key={item.id || idx} className="pt-2.5 first:pt-0 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px]">
+                      <span className="font-bold text-blue-600 dark:text-blue-400">{item.title}</span>
+                      <span>{new Date(item.timestamp).toLocaleString()}</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-300 leading-snug">{item.description}</p>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">By: {item.actor} ({item.role})</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Citizen Verification & Feedback Section (For Resolved Issues) */}
-          {isResolved && (
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  <h4 className="font-bold text-sm text-emerald-950">Citizen Quality Verification</h4>
-                </div>
-                {issue.feedback && (
-                  <div className="flex items-center gap-1 text-amber-500">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`w-4 h-4 ${
-                          star <= (issue.feedback?.rating || 5) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
+          {/* Assigned Department & Field Crew Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 transition-colors">
+              <div className="font-bold text-slate-700 dark:text-slate-300">Jurisdiction Department</div>
+              <div className="flex items-center gap-1.5 text-slate-900 dark:text-slate-100 font-semibold">
+                <Building className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>{issue.department}</span>
               </div>
+              <div className="text-slate-500 dark:text-slate-400 text-[11px] pt-1">
+                Estimated Resolution SLA: <strong className="text-slate-700 dark:text-slate-300">{issue.eta || 'Standard SLA (24-48 hours)'}</strong>
+              </div>
+            </div>
 
-              {issue.feedback ? (
-                <div className="text-xs text-emerald-900 bg-white/70 p-3 rounded-xl border border-emerald-200/60">
-                  <p className="font-semibold">"{issue.feedback.feedbackText}"</p>
-                  <p className="text-[10px] text-emerald-700 mt-1">
-                    Verified by {issue.feedback.citizenName} on {new Date(issue.feedback.timestamp).toLocaleDateString()}
-                  </p>
+            <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 transition-colors">
+              <div className="font-bold text-slate-700 dark:text-slate-300">Assigned Ward Field Crew</div>
+              {issue.assignedTeam ? (
+                <div className="space-y-0.5 text-slate-800 dark:text-slate-200">
+                  <div className="font-semibold">{issue.assignedTeam.name}</div>
+                  <div className="text-slate-500 dark:text-slate-400 text-[11px]">Field Lead: {issue.assignedTeam.leadWorker}</div>
+                  <div className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-emerald-500" />
+                    <span>{issue.assignedTeam.contactNumber}</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3 pt-1">
-                  <p className="text-xs text-emerald-800">
-                    Did municipal crew successfully resolve this issue? Rate their workmanship:
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setCitizenRating(star)}
-                        className="p-1 hover:scale-110 transition-transform"
-                      >
-                        <Star
-                          className={`w-6 h-6 ${
-                            star <= citizenRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                    <span className="text-xs font-bold text-slate-700 ml-2">
-                      {citizenRating} / 5 Stars
-                    </span>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={feedbackNote}
-                    onChange={(e) => setFeedbackNote(e.target.value)}
-                    placeholder="Add brief feedback on quality or speed..."
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-emerald-200 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={handleConfirmFix}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm"
-                    >
-                      ✓ Confirm Resolution
-                    </button>
-                    <button
-                      onClick={handleFlagPersists}
-                      className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold px-4 py-2 rounded-xl transition-all"
-                    >
-                      ⚠️ Issue Persists (Re-open Ticket)
-                    </button>
-                  </div>
+                <div className="text-slate-500 dark:text-slate-400 text-[11px]">
+                  Pending dispatch assignment to ward division engineer.
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Citizen Feedback & Verification (If Resolved) */}
+          {isResolved && (
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 p-4 rounded-xl space-y-3 transition-colors">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm">
+                    Citizen Verification & Work Quality
+                  </h4>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    Municipal staff marked this ticket as Resolved. Please confirm if the repair was completed satisfactorily.
+                  </p>
+                </div>
+                {issue.feedback?.isResolvedConfirmed && (
+                  <span className="bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs">
+                    Verified Fixed ({issue.feedback.rating}★)
+                  </span>
+                )}
+              </div>
+
+              {!showFeedbackForm && !issue.feedback ? (
+                <button
+                  type="button"
+                  onClick={() => setShowFeedbackForm(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  Verify or Rate This Fix
+                </button>
+              ) : showFeedbackForm ? (
+                <div className="space-y-3 pt-2.5 border-t border-emerald-200 dark:border-emerald-800/80 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Rate Resolution Quality (1 to 5 Stars):
+                    </label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setCitizenRating(star)}
+                          className={`p-1 text-lg transition-transform hover:scale-120 ${
+                            star <= citizenRating ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Comments / Feedback Note:
+                    </label>
+                    <input
+                      type="text"
+                      value={feedbackNote}
+                      onChange={(e) => setFeedbackNote(e.target.value)}
+                      placeholder="e.g. Asphalt was rolled smooth, or water still pooling..."
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500/30"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleConfirmFix}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
+                    >
+                      ✓ Confirm Resolution Fixed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFlagPersists}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
+                    >
+                      ✕ Issue Persists (Reopen)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowFeedbackForm(false)}
+                      className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-xs px-2.5 py-1.5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           )}
 
-          {/* Community Discussion Thread */}
-          <div className="space-y-3 pt-2 border-t border-slate-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Community Comments ({issue.comments?.length || 0})</span>
-              </h3>
+          {/* Upvote & Endorsement Box */}
+          <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3.5 flex items-center justify-between transition-colors">
+            <div className="text-xs">
+              <span className="font-bold text-slate-900 dark:text-slate-100">{issue.upvotes || 0} Citizens</span>
+              <span className="text-slate-600 dark:text-slate-400"> have endorsed this grievance to expedite municipal repair.</span>
             </div>
+            <button
+              type="button"
+              onClick={() => upvoteIssue(issue.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                issue.hasUpvoted
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <ThumbsUp className="w-3.5 h-3.5" />
+              <span>{issue.hasUpvoted ? 'Endorsed' : 'Endorse (+1)'}</span>
+            </button>
+          </div>
+
+          {/* Community Discussion & Official Updates */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+            <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>Community Discussion ({issue.comments?.length || 0})</span>
+            </h4>
 
             {/* Comments List */}
-            <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-              {(!issue.comments || issue.comments.length === 0) ? (
-                <div className="text-xs text-slate-400 italic py-2">
-                  No community comments yet. Be the first to add an update.
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {!issue.comments || issue.comments.length === 0 ? (
+                <div className="text-xs text-slate-400 dark:text-slate-500 italic p-3 text-center">
+                  No comments logged yet. Citizens and coordinators can leave updates below.
                 </div>
               ) : (
-                issue.comments.map((comm) => (
+                issue.comments.map((comment) => (
                   <div
-                    key={comm.id}
-                    className={`p-3 rounded-xl text-xs space-y-1 ${
-                      comm.isOfficial
-                        ? 'bg-teal-50/80 border border-teal-200/80'
-                        : 'bg-slate-50 border border-slate-200'
+                    key={comment.id}
+                    className={`p-3 rounded-xl border text-xs transition-colors ${
+                      comment.isOfficial
+                        ? 'bg-blue-50/80 border-blue-200 dark:bg-blue-950/40 dark:border-blue-900/60'
+                        : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/70'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={comm.avatar}
-                          alt={comm.author}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span className="font-bold text-slate-900">{comm.author}</span>
-                        {comm.isOfficial && (
-                          <span className="text-[10px] font-bold bg-teal-600 text-white px-1.5 py-0.2 rounded">
-                            Official
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+                        <span>{comment.author}</span>
+                        {comment.isOfficial && (
+                          <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                            Official Ward Staff
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(comm.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-slate-400 dark:text-slate-500">
+                        {new Date(comment.timestamp).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-slate-700 pl-7">{comm.content}</p>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{comment.content}</p>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Add Comment Input */}
-            <form onSubmit={handleSendComment} className="flex items-center gap-2 pt-1">
+            {/* Comment Form */}
+            <form onSubmit={handleSendComment} className="flex gap-2">
               <input
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Share a condition update or note for neighbors..."
-                className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="Post a status update or citizen comment..."
+                className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
               />
               <button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                disabled={!newComment.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
                 <span>Post</span>
+                <Send className="w-3 h-3" />
               </button>
             </form>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700/70 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>CivicFix Public Transparency Guarantee</span>
+            <span className="text-slate-500 dark:text-slate-400">
+              Ticket #{issue.ticketId} • Status: <strong className="text-slate-800 dark:text-slate-200">{issue.status}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setReceiptIssue(issue)}
+              className="text-blue-600 dark:text-blue-400 font-bold hover:underline hidden sm:inline"
+            >
+              • View Official Receipt Slip
+            </button>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-xl transition-colors"
+            className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-xl transition-colors cursor-pointer"
           >
             Close
           </button>

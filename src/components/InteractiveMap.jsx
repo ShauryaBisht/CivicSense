@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { MapPin, Navigation, ThumbsUp, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Navigation, RotateCcw, Layers } from 'lucide-react';
+import { useCivic } from '../context/CivicContext';
 
 export default function InteractiveMap({
   issues = [],
@@ -8,14 +9,23 @@ export default function InteractiveMap({
   selectedLocation = null,
   onLocationSelect = null,
   onSelectIssue = null,
-  center = [12.9092, 77.5666],
-  zoom = 14,
-  height = '100%'
+  center = [12.9716, 77.5946],
+  zoom = 12,
+  height = '100%',
+  activeMarkerId = null
 }) {
+  const { theme } = useCivic();
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersLayerRef = useRef(null);
   const pickerMarkerRef = useRef(null);
+  const markersMapRef = useRef(new Map());
+
+  const isDark = theme === 'dark';
+
+  // Standard OpenStreetMap tiles (100% free, no API key required)
+  const osmTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   // Initialize Map
   useEffect(() => {
@@ -33,21 +43,23 @@ export default function InteractiveMap({
       attributionControl: false
     });
 
-    // Add standard OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Standard OpenStreetMap Layer (no API key needed)
+    const tileLayer = L.tileLayer(osmTileUrl, {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Zoom control in bottom right
+    tileLayerRef.current = tileLayer;
+
+    // Zoom control at bottom-right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Layer group for dynamic markers
+    // Marker Layer Group
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
 
-    // Handle clicks in picker mode
+    // Picker click handler
     if (mode === 'picker') {
       map.on('click', (e) => {
         const { lat, lng } = e.latlng;
@@ -55,14 +67,14 @@ export default function InteractiveMap({
           onLocationSelect({
             lat: parseFloat(lat.toFixed(5)),
             lng: parseFloat(lng.toFixed(5)),
-            address: `Pin at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            neighborhood: 'Selected Location'
+            address: `Pin placed at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+            neighborhood: 'Selected Vicinity'
           });
         }
       });
     }
 
-    // Force map to adapt to container layout
+    // Resize observer
     const resizeObserver = new ResizeObserver(() => {
       if (map) {
         map.invalidateSize();
@@ -73,16 +85,24 @@ export default function InteractiveMap({
       resizeObserver.observe(mapContainerRef.current);
     }
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       map.invalidateSize();
     }, 250);
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Invalidate map size on theme toggle to ensure smooth redraw
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.invalidateSize();
+    }
+  }, [isDark]);
 
   // Update Markers in Explorer Mode
   useEffect(() => {
@@ -92,109 +112,140 @@ export default function InteractiveMap({
     if (!map || !markersGroup) return;
 
     markersGroup.clearLayers();
+    markersMapRef.current.clear();
 
     issues.forEach((issue) => {
       if (!issue.location?.lat || !issue.location?.lng) return;
 
       const isEmergency = issue.urgency === 'Emergency';
-      const isResolved = issue.status === 'Resolved';
       const isHigh = issue.urgency === 'High';
+      const isResolved = issue.status === 'Resolved';
 
-      let bgClass = 'bg-teal-600 text-white';
-      let ringColor = 'rgba(13, 148, 136, 0.4)';
+      let bgGradient = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+      let shadowColor = 'rgba(37, 99, 235, 0.45)';
+      let symbol = '•';
 
       if (isResolved) {
-        bgClass = 'bg-emerald-600 text-white';
-        ringColor = 'rgba(16, 185, 129, 0.4)';
+        bgGradient = 'linear-gradient(135deg, #10b981, #059669)';
+        shadowColor = 'rgba(16, 185, 129, 0.45)';
+        symbol = '✓';
       } else if (isEmergency) {
-        bgClass = 'bg-red-600 text-white animate-pulse';
-        ringColor = 'rgba(239, 68, 68, 0.7)';
+        bgGradient = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        shadowColor = 'rgba(239, 68, 68, 0.55)';
+        symbol = '!';
       } else if (isHigh) {
-        bgClass = 'bg-amber-500 text-slate-900';
-        ringColor = 'rgba(245, 158, 11, 0.5)';
+        bgGradient = 'linear-gradient(135deg, #f97316, #ea580c)';
+        shadowColor = 'rgba(249, 115, 22, 0.5)';
+        symbol = '!';
       }
 
+      const pulseEffect = isEmergency
+        ? `<span style="position: absolute; width: 38px; height: 38px; border-radius: 50%; background: rgba(239, 68, 68, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>`
+        : '';
+
       const iconHtml = `
-        <div style="position: relative; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
-          ${
-            isEmergency
-              ? `<div style="position: absolute; inset: -6px; border-radius: 9999px; background: ${ringColor}; animation: pulse-beacon 1.8s infinite;"></div>`
-              : ''
-          }
-          <div class="custom-marker-pin ${bgClass}" style="width: 34px; height: 34px; border: 2.5px solid white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">
-            ${
-              isResolved
-                ? '✓'
-                : isEmergency
-                ? '⚡'
-                : isHigh
-                ? '!'
-                : '•'
-            }
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
+          ${pulseEffect}
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: ${bgGradient}; border: 2.5px solid ${isDark ? '#0f172a' : '#ffffff'}; box-shadow: 0 4px 10px ${shadowColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 13px; z-index: 2;">
+            ${symbol}
           </div>
         </div>
       `;
 
       const customIcon = L.divIcon({
         html: iconHtml,
-        className: 'civic-marker-wrapper',
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
-        popupAnchor: [0, -20]
+        className: 'civic-marker-pin',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -16]
       });
 
       const marker = L.marker([issue.location.lat, issue.location.lng], {
         icon: customIcon
       });
 
-      // Rich interactive Popup
-      const popupContent = document.createElement('div');
-      popupContent.className = 'civic-popup-card';
-      popupContent.style.minWidth = '240px';
-      popupContent.style.maxWidth = '280px';
-      popupContent.innerHTML = `
-        <div style="overflow: hidden; border-radius: 12px; font-family: inherit;">
-          <div style="height: 110px; width: 100%; position: relative; background: #0f172a;">
-            <img src="${issue.mediaUrl}" alt="${issue.title}" style="width: 100%; height: 100%; object-fit: cover;" />
-            <div style="position: absolute; top: 6px; left: 6px; background: rgba(15,23,42,0.85); color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+      // Accessible Popup
+      const popupDiv = document.createElement('div');
+      popupDiv.style.minWidth = '230px';
+      popupDiv.style.maxWidth = '270px';
+      popupDiv.style.padding = '10px';
+      popupDiv.style.fontFamily = 'Inter, -apple-system, sans-serif';
+
+      const statusBg = isResolved
+        ? '#ecfdf5'
+        : isEmergency
+        ? '#fef2f2'
+        : '#f0f9ff';
+      const statusColor = isResolved
+        ? '#047857'
+        : isEmergency
+        ? '#b91c1c'
+        : '#0369a1';
+
+      popupDiv.innerHTML = `
+        <div>
+          ${
+            issue.mediaUrl
+              ? `<div style="width: 100%; height: 96px; margin-bottom: 8px; border-radius: 6px; overflow: hidden; background: #334155;">
+                   <img src="${issue.mediaUrl}" alt="${issue.title}" style="width: 100%; height: 100%; object-fit: cover;" />
+                 </div>`
+              : ''
+          }
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 4px;">
+            <span style="font-family: monospace; font-size: 10px; font-weight: 700; color: ${isDark ? '#94a3b8' : '#64748b'};">
               ${issue.ticketId}
-            </div>
-            <div style="position: absolute; top: 6px; right: 6px; background: ${
-              isResolved ? '#059669' : isEmergency ? '#dc2626' : '#d97706'
-            }; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+            </span>
+            <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: ${statusBg}; color: ${statusColor};">
               ${issue.status}
-            </div>
+            </span>
           </div>
-          <div style="padding: 10px 4px 4px 4px;">
-            <div style="font-weight: 700; font-size: 13px; line-height: 1.3; color: #0f172a; margin-bottom: 4px;">
-              ${issue.title}
-            </div>
-            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
-              📍 ${issue.location.neighborhood || issue.location.address}
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 8px; margin-top: 4px;">
-              <span style="font-size: 11px; font-weight: 600; color: #0d9488;">
-                ▲ ${issue.upvotes} Citizens Endorsed
-              </span>
-              <button id="view-btn-${issue.id}" style="background: #0f172a; color: white; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                View Details →
-              </button>
-            </div>
+          <div style="font-weight: 700; font-size: 13px; color: ${isDark ? '#f8fafc' : '#0f172a'}; line-height: 1.3; margin-bottom: 5px;">
+            ${issue.title}
           </div>
+          <div style="font-size: 11px; color: ${isDark ? '#94a3b8' : '#64748b'}; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <span>📍</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${issue.location.address || issue.location.neighborhood}
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; padding-top: 6px; border-top: 1px solid ${isDark ? '#334155' : '#e2e8f0'};">
+            <span style="font-weight: 600; color: #3b82f6;">
+              👍 ${issue.upvotes || 0} Upvotes
+            </span>
+            <span style="color: ${isDark ? '#94a3b8' : '#64748b'}; font-size: 10px;">
+              ${issue.category}
+            </span>
+          </div>
+          <button id="view-issue-${issue.id}" style="width: 100%; margin-top: 8px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 6px 0; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
+            Inspect Full Ticket Details →
+          </button>
         </div>
       `;
 
-      popupContent.querySelector(`#view-btn-${issue.id}`)?.addEventListener('click', (e) => {
+      popupDiv.querySelector(`#view-issue-${issue.id}`)?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (onSelectIssue) onSelectIssue(issue);
       });
 
-      marker.bindPopup(popupContent, { maxWidth: 300 });
+      marker.bindPopup(popupDiv, { maxWidth: 280 });
       markersGroup.addLayer(marker);
+      markersMapRef.current.set(issue.id, marker);
     });
-  }, [issues, mode, onSelectIssue]);
+  }, [issues, mode, onSelectIssue, isDark]);
 
-  // Update Draggable Marker in Picker Mode
+  // Handle External Marker Focus
+  useEffect(() => {
+    if (!activeMarkerId || mode !== 'explorer') return;
+    const marker = markersMapRef.current.get(activeMarkerId);
+    const map = mapInstanceRef.current;
+    if (marker && map) {
+      const latlng = marker.getLatLng();
+      map.flyTo(latlng, 15, { duration: 0.8 });
+      marker.openPopup();
+    }
+  }, [activeMarkerId, mode]);
+
+  // Draggable Marker in Picker Mode
   useEffect(() => {
     if (mode !== 'picker') return;
     const map = mapInstanceRef.current;
@@ -205,19 +256,16 @@ export default function InteractiveMap({
 
     if (!pickerMarkerRef.current) {
       const pinHtml = `
-        <div style="position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
-          <div style="position: absolute; inset: -4px; border-radius: 9999px; background: rgba(13, 148, 136, 0.4); animation: pulse-beacon 2s infinite;"></div>
-          <div style="width: 36px; height: 36px; border-radius: 9999px; background: #0d9488; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">
-            📍
-          </div>
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 3px solid ${isDark ? '#0f172a' : '#ffffff'}; box-shadow: 0 4px 14px rgba(37,99,235,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; cursor: grab;">
+          📍
         </div>
       `;
 
       const pickerIcon = L.divIcon({
         html: pinHtml,
         className: 'civic-picker-pin',
-        iconSize: [42, 42],
-        iconAnchor: [21, 21]
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
       });
 
       const marker = L.marker([lat, lng], {
@@ -232,7 +280,7 @@ export default function InteractiveMap({
             lat: parseFloat(pos.lat.toFixed(5)),
             lng: parseFloat(pos.lng.toFixed(5)),
             address: `Pin placed at ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`,
-            neighborhood: 'Custom Geolocation'
+            neighborhood: 'Selected Location'
           });
         }
       });
@@ -242,7 +290,7 @@ export default function InteractiveMap({
       pickerMarkerRef.current.setLatLng([lat, lng]);
       map.panTo([lat, lng]);
     }
-  }, [selectedLocation, mode, center, onLocationSelect]);
+  }, [selectedLocation, mode, center, onLocationSelect, isDark]);
 
   const handleCenterUserLocation = () => {
     if (!mapInstanceRef.current) return;
@@ -255,62 +303,79 @@ export default function InteractiveMap({
             onLocationSelect({
               lat: parseFloat(latitude.toFixed(5)),
               lng: parseFloat(longitude.toFixed(5)),
-              address: 'Auto-detected current location',
+              address: 'Auto-detected user GPS location',
               neighborhood: 'Current Vicinity'
             });
           }
         },
         () => {
-          // Fallback to metropolitan default
-          mapInstanceRef.current.flyTo([40.7180, -74.0020], 14);
+          mapInstanceRef.current.flyTo([12.9716, 77.5946], 13);
         }
       );
     }
   };
 
+  const handleResetCenter = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(center, zoom);
+    }
+  };
+
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 shadow-sm" style={{ height }}>
-      {/* Map Container */}
+    <div className="relative w-full h-full min-h-[300px] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 transition-colors">
+      {/* Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full min-h-[300px]" />
 
-      {/* Floating Map Controls & Badges */}
-      <div className="absolute top-4 left-4 z-[400] flex flex-col gap-2">
-        <div className="bg-slate-900/90 backdrop-blur-md text-white text-xs font-medium px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/60 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          <span>{mode === 'picker' ? 'Drag pin or click map to set location' : `${issues.length} Civic Incidents Monitored`}</span>
+      {/* Floating Header Info */}
+      <div className="absolute top-3 left-3 z-[400] flex flex-col gap-1.5 pointer-events-none">
+        <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md border border-slate-200 dark:border-slate-700/80 transition-colors">
+          {mode === 'picker'
+            ? 'Click or drag the marker to pinpoint the grievance'
+            : `Showing ${issues.length} Civic Issues`}
         </div>
 
         {mode === 'explorer' && (
-          <div className="hidden sm:flex items-center gap-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-md border border-slate-200 text-[11px] font-semibold text-slate-700">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping inline-block" />
+          <div className="pointer-events-auto hidden sm:flex items-center gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-md border border-slate-200 dark:border-slate-700/80 text-[11px] font-medium text-slate-700 dark:text-slate-300 transition-colors">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-xs shadow-red-500/50" />
               Emergency
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-xs shadow-orange-500/50" />
               High
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-xs shadow-blue-500/50" />
               Active
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
               Resolved
             </span>
           </div>
         )}
       </div>
 
-      {/* Recenter GPS floating button */}
-      <button
-        onClick={handleCenterUserLocation}
-        title="Center on my location"
-        className="absolute bottom-5 left-4 z-[400] bg-white hover:bg-slate-50 text-slate-800 p-2.5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2 text-xs font-semibold transition-all hover:scale-105 active:scale-95"
-      >
-        <Navigation className="w-4 h-4 text-teal-600" />
-        <span className="hidden sm:inline">My Location</span>
-      </button>
+      {/* Quick Map Controls */}
+      <div className="absolute bottom-4 left-3 z-[400] flex items-center gap-2">
+        <button
+          onClick={handleCenterUserLocation}
+          title="Detect and center to my location"
+          className="bg-white/95 dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 px-3 py-1.5 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+        >
+          <Navigation className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span>My GPS</span>
+        </button>
+
+        <button
+          onClick={handleResetCenter}
+          title="Reset map view to city center"
+          className="bg-white/95 dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 px-2.5 py-1.5 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+        >
+          <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <span className="hidden sm:inline">Reset City View</span>
+        </button>
+      </div>
     </div>
   );
 }

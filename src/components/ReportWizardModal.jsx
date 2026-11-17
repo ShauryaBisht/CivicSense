@@ -1,52 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCivic } from '../context/CivicContext';
-import { analyzeIssueContent } from '../utils/aiDetector';
+import { analyzeIssueContent } from '../utils/triageEngine';
+import { findNearbySimilarIssues } from '../utils/geoUtils';
 import { CATEGORIES, URGENCIES, SAMPLE_PRESET_IMAGES } from '../data/mockIssues';
 import InteractiveMap from './InteractiveMap';
 import {
   X,
-  UploadCloud,
+  Upload,
   MapPin,
-  Sparkles,
-  CheckCircle2,
+  CheckCircle,
   AlertTriangle,
   ArrowRight,
   ArrowLeft,
   Camera,
   Navigation,
-  Check,
-  ShieldAlert,
-  Loader2,
-  HelpCircle
+  Sparkles,
+  User,
+  Zap,
+  ThumbsUp,
+  Printer,
+  FileCheck2,
+  CopyCheck
 } from 'lucide-react';
 
 export default function ReportWizardModal({ isOpen, onClose }) {
-  const { addIssue, setSelectedIssue } = useCivic();
+  const { addIssue, setSelectedIssue, issues, upvoteIssue, setReceiptIssue, addToast } = useCivic();
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAnalyzingAi, setIsAnalyzingAi] = useState(false);
+  const [submittedIssue, setSubmittedIssue] = useState(null);
+  const [dismissedDuplicateId, setDismissedDuplicateId] = useState(null);
 
   // Form State
-  const [mediaUrl, setMediaUrl] = useState(SAMPLE_PRESET_IMAGES[0].url);
+  const [mediaUrl, setMediaUrl] = useState(SAMPLE_PRESET_IMAGES[0]?.url || '');
   const [imageFileName, setImageFileName] = useState('');
   const [location, setLocation] = useState({
-    lat: 40.7180,
-    lng: -74.0020,
-    address: '88 Grand St & Mercer Way',
-    neighborhood: 'SoHo Commons'
+    lat: 12.9352,
+    lng: 77.6245,
+    address: '80 Feet Road, 5th Block, Koramangala',
+    neighborhood: 'Koramangala'
   });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Infrastructure');
   const [urgency, setUrgency] = useState('Medium');
+  const [triageNote, setTriageNote] = useState(null);
   const [reporterName, setReporterName] = useState('');
   const [reporterContact, setReporterContact] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
 
-  // AI Diagnostic metadata
-  const [aiReport, setAiReport] = useState(null);
+  // Detect nearby similar active issues (Smart Deduplication)
+  const nearbyDuplicates = useMemo(() => {
+    if (step < 2) return [];
+    return findNearbySimilarIssues(location, category, issues, 300);
+  }, [location, category, issues, step]);
+
+  const primaryDuplicate = nearbyDuplicates.find((d) => d.id !== dismissedDuplicateId);
+
+  const handleEndorseDuplicate = (duplicate) => {
+    upvoteIssue(duplicate.id);
+    onClose();
+    setSelectedIssue(duplicate);
+    addToast(`Endorsed existing issue ${duplicate.ticketId} (+10 Karma). Priority escalated!`, 'success');
+  };
 
   // Reset form when modal opens
   useEffect(() => {
@@ -56,14 +72,16 @@ export default function ReportWizardModal({ isOpen, onClose }) {
       setDescription('');
       setCategory('Infrastructure');
       setUrgency('Medium');
-      setAiReport(null);
-      setMediaUrl(SAMPLE_PRESET_IMAGES[0].url);
+      setTriageNote(null);
+      setSubmittedIssue(null);
+      setMediaUrl(SAMPLE_PRESET_IMAGES[0]?.url || '');
+      setImageFileName('');
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Handle local image upload preview
+  // Handle local image file upload preview
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -78,487 +96,423 @@ export default function ReportWizardModal({ isOpen, onClose }) {
     }
   };
 
-  // Run AI analysis
-  const runAiAnalysis = () => {
-    if (!title && !description) return;
-    setIsAnalyzingAi(true);
-
-    setTimeout(() => {
-      const result = analyzeIssueContent(title, description);
-      setAiReport(result);
-      setCategory(result.category);
-      setUrgency(result.urgency);
-      setIsAnalyzingAi(false);
-    }, 700);
-  };
-
-  // Auto trigger AI analysis when user finishes typing title or description
-  const handleDetailsBlur = () => {
-    if ((title.length > 5 || description.length > 10) && !aiReport) {
-      runAiAnalysis();
+  // Run keyword-based category classifier
+  const handleAutoDetect = () => {
+    if (!title.trim() && !description.trim()) {
+      alert('Please enter a title or description first to auto-classify.');
+      return;
     }
+    const result = analyzeIssueContent(title, description);
+    setCategory(result.category);
+    setUrgency(result.urgency);
+    setTriageNote(
+      `Classification matched: ${result.category} (${result.urgency} Urgency). Keywords detected: ${result.detectedKeywords.join(', ')}`
+    );
   };
 
-  // Auto detect current location via Geolocation API
-  const handleAutoDetectLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = parseFloat(pos.coords.latitude.toFixed(5));
-          const lng = parseFloat(pos.coords.longitude.toFixed(5));
-          setLocation({
-            lat,
-            lng,
-            address: `GPS Pin: ${lat}, ${lng}`,
-            neighborhood: 'Detected Current Location'
-          });
-        },
-        () => {
-          // Fallback to random spot in metropolitan area
-          const randomOffsetLat = (Math.random() - 0.5) * 0.02;
-          const randomOffsetLng = (Math.random() - 0.5) * 0.02;
-          setLocation({
-            lat: parseFloat((40.718 + randomOffsetLat).toFixed(5)),
-            lng: parseFloat((-74.002 + randomOffsetLng).toFixed(5)),
-            address: 'Central Metro Hub',
-            neighborhood: 'Downtown Hub'
-          });
-        }
-      );
-    }
-  };
-
-  // Final Submit
-  const handleSubmitReport = () => {
+  // Handle final submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
     setIsSubmitting(true);
 
     setTimeout(() => {
-      // Create issue
-      const newIssue = addIssue({
-        title: title || 'Reported Civic Incident',
-        description: description || 'No extra description provided by citizen.',
+      const created = addIssue({
+        title: title || 'Civic Issue Report',
+        description: description || 'Reported by local resident.',
         category,
         urgency,
         location,
         mediaUrl,
         reporter: {
-          name: reporterName,
-          contact: reporterContact,
+          name: isAnonymous ? 'Anonymous Resident' : (reporterName || 'Citizen'),
+          contact: reporterContact || '',
           isAnonymous
-        },
-        isAnonymous,
-        aiMetadata: aiReport || {
-          confidence: 91,
-          detectedKeywords: [category.toLowerCase()],
-          reasoning: `Auto-routed to ${category} municipal field unit.`
         }
       });
 
-      // Confetti burst!
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (e) {
-        // graceful fallback
-      }
-
       setIsSubmitting(false);
-      onClose();
-      // Directly open in modal for immediate live tracking experience!
-      setSelectedIssue(newIssue);
-    }, 900);
+      setSubmittedIssue(created);
+      setStep(5); // Step 5 is Success Screen
+    }, 400);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs overflow-y-auto transition-opacity">
       <div
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto animate-in zoom-in-95 duration-200"
+        className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col my-auto max-h-[92vh] transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Wizard Header */}
-        <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
-              <h2 className="text-lg font-bold">Report a Civic Issue</h2>
+        {/* Modal Top Bar */}
+        <div className="p-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
+              <Camera className="w-4 h-4" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Step {step} of 4: {step === 1 ? 'Media Evidence' : step === 2 ? 'Location Pin' : step === 3 ? 'Issue Details & AI' : 'Review & Submit'}
-            </p>
+            <div>
+              <h2 className="font-bold text-base sm:text-lg leading-tight">
+                Report a Municipal Grievance
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Lodge civic issue with ward public works
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Stepper Progress Bar */}
-        <div className="grid grid-cols-4 h-1.5 bg-slate-100">
-          <div className={`transition-all duration-300 ${step >= 1 ? 'bg-teal-500' : 'bg-slate-200'}`} />
-          <div className={`transition-all duration-300 ${step >= 2 ? 'bg-teal-500' : 'bg-slate-200'}`} />
-          <div className={`transition-all duration-300 ${step >= 3 ? 'bg-teal-500' : 'bg-slate-200'}`} />
-          <div className={`transition-all duration-300 ${step >= 4 ? 'bg-teal-500' : 'bg-slate-200'}`} />
-        </div>
+        {/* Wizard Step Progress Header */}
+        {step <= 4 && (
+          <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700/70 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <div className={`flex items-center gap-1.5 ${step === 1 ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>1</span>
+              <span>Photo</span>
+            </div>
+            <span className="text-slate-300 dark:text-slate-600">→</span>
+            <div className={`flex items-center gap-1.5 ${step === 2 ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>2</span>
+              <span>Location</span>
+            </div>
+            <span className="text-slate-300 dark:text-slate-600">→</span>
+            <div className={`flex items-center gap-1.5 ${step === 3 ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>3</span>
+              <span>Details</span>
+            </div>
+            <span className="text-slate-300 dark:text-slate-600">→</span>
+            <div className={`flex items-center gap-1.5 ${step === 4 ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 4 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>4</span>
+              <span>Review</span>
+            </div>
+          </div>
+        )}
 
-        {/* Wizard Content Body */}
-        <div className="p-5 sm:p-6 flex-1 max-h-[72vh] overflow-y-auto">
-          {/* STEP 1: MEDIA UPLOAD */}
+        {/* Modal Scrollable Body */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 text-slate-800 dark:text-slate-200">
+          
+          {/* STEP 1: PHOTO / MEDIA */}
           {step === 1 && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-slate-900 mb-1">
-                  Upload Photo or Evidence
-                </label>
-                <p className="text-xs text-slate-500">
-                  Visual proof assists municipal crews in identifying equipment and material requirements.
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                  Step 1: Upload Incident Photo
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  A clear photograph helps ward response engineers immediately assess required equipment and crew size.
                 </p>
               </div>
 
-              {/* Drag & drop upload box */}
-              <div className="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-2xl p-6 text-center transition-colors relative bg-slate-50/50 group">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <UploadCloud className="w-6 h-6" />
+              {/* Photo Preview Box */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900/60 aspect-video flex items-center justify-center relative">
+                {mediaUrl ? (
+                  <img
+                    src={mediaUrl}
+                    alt="Issue Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center text-slate-400 p-4">
+                    <Camera className="w-8 h-8 mx-auto mb-1 text-slate-300 dark:text-slate-600" />
+                    <span className="text-xs">No image selected</span>
                   </div>
-                  <div className="text-sm font-semibold text-slate-700">
-                    Click to browse or drop an image here
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    Supports JPG, PNG, WEBP up to 10MB
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Quick sample image presets for fast testing */}
-              <div>
-                <div className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-teal-600" />
-                  <span>Or Quick-Pick a Sample Incident Photo:</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {/* File Upload Input */}
+              <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-colors">
+                <label className="cursor-pointer block text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  <Upload className="w-4 h-4 mx-auto mb-1.5" />
+                  <span>Choose file from your device</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                {imageFileName && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Selected file: {imageFileName}
+                  </p>
+                )}
+              </div>
+
+              {/* Preset Sample Buttons */}
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Or select sample test incident:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {SAMPLE_PRESET_IMAGES.map((preset, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setMediaUrl(preset.url)}
-                      className={`relative rounded-xl overflow-hidden border text-left p-1 transition-all ${
+                      className={`text-xs p-2 rounded-lg border text-left truncate transition-all cursor-pointer ${
                         mediaUrl === preset.url
-                          ? 'border-teal-600 ring-2 ring-teal-500/30'
-                          : 'border-slate-200 hover:border-slate-400'
+                          ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-200 font-bold shadow-xs'
+                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                     >
-                      <img
-                        src={preset.url}
-                        alt={preset.label}
-                        className="w-full h-16 object-cover rounded-lg"
-                      />
-                      <div className="p-1 text-[11px] font-medium text-slate-700 truncate">
-                        {preset.label}
-                      </div>
-                      {mediaUrl === preset.url && (
-                        <div className="absolute top-2 right-2 bg-teal-600 text-white rounded-full p-0.5 shadow">
-                          <Check className="w-3 h-3" />
-                        </div>
-                      )}
+                      {preset.label}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Current Preview */}
-              {mediaUrl && (
-                <div className="rounded-2xl overflow-hidden border border-slate-200 relative aspect-video bg-slate-900">
-                  <img src={mediaUrl} alt="Selected Preview" className="w-full h-full object-cover" />
-                  <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-md text-white text-[11px] px-2.5 py-1 rounded-lg">
-                    ✓ Photo Loaded for Inspection
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* STEP 2: LOCATION PICKER */}
+          {/* STEP 2: LOCATION */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <label className="block text-sm font-bold text-slate-900">
-                    Pin Exact Incident Location
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    Click anywhere on the map or drag the pin to set the coordinates.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutoDetectLocation}
-                  className="flex items-center gap-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl text-xs font-semibold self-start sm:self-auto transition-colors"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>Auto-detect GPS</span>
-                </button>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                  Step 2: Pinpoint Ward Location on Map
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Click on the map or drag the marker to set the exact position.
+                </p>
               </div>
 
-              {/* Leaflet Map Picker Component */}
-              <div className="h-64 sm:h-72 rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
+              {/* Interactive Picker Map */}
+              <div className="h-60 sm:h-64 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs">
                 <InteractiveMap
                   mode="picker"
                   selectedLocation={location}
                   onLocationSelect={(newLoc) => setLocation(newLoc)}
-                  zoom={14}
                   height="100%"
                 />
               </div>
 
-              {/* Location Input & Address Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Location Text Input */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Street Address / Landmark
                   </label>
                   <input
                     type="text"
                     value={location.address}
                     onChange={(e) => setLocation({ ...location, address: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    placeholder="e.g. 142 Elm St, near corner"
+                    placeholder="e.g. 80 Feet Road, Near Sony World Signal"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Neighborhood / Ward
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Ward / Locality
                   </label>
                   <input
                     type="text"
                     value={location.neighborhood}
                     onChange={(e) => setLocation({ ...location, neighborhood: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    placeholder="e.g. Downtown Ward 4"
+                    placeholder="e.g. Koramangala, Indiranagar, HSR Layout"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Quick Neighborhood Presets */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-slate-500">Quick Areas:</span>
-                {[
-                  { name: 'Downtown Center', lat: 40.7128, lng: -74.006 },
-                  { name: 'SoHo Commons', lat: 40.718, lng: -74.001 },
-                  { name: 'East Village', lat: 40.728, lng: -73.992 },
-                  { name: 'Market District', lat: 40.725, lng: -74.009 }
-                ].map((area) => (
-                  <button
-                    key={area.name}
-                    type="button"
-                    onClick={() =>
-                      setLocation({
-                        lat: area.lat,
-                        lng: area.lng,
-                        address: `${area.name} Area`,
-                        neighborhood: area.name
-                      })
-                    }
-                    className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors"
-                  >
-                    {area.name}
-                  </button>
-                ))}
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <span>Coordinates: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">GPS Geo-Tagged</span>
               </div>
+
+              {/* Smart Duplicate Grievance Alert */}
+              {primaryDuplicate && (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl p-3.5 space-y-2.5 animate-in fade-in transition-all">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                      <span className="font-bold text-amber-950 dark:text-amber-200 text-xs">
+                        Nearby Existing Grievance Found ({primaryDuplicate.distanceMeters}m away)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDismissedDuplicateId(primaryDuplicate.id)}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/60">
+                    {primaryDuplicate.mediaUrl && (
+                      <img
+                        src={primaryDuplicate.mediaUrl}
+                        alt=""
+                        className="w-12 h-12 rounded object-cover flex-shrink-0 border border-slate-200 dark:border-slate-700"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1 text-xs">
+                      <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                        <span>{primaryDuplicate.ticketId}</span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-500 font-sans">{primaryDuplicate.category}</span>
+                      </div>
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                        {primaryDuplicate.title}
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">
+                        📍 {primaryDuplicate.location.address}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+                    <span className="text-[11px] text-amber-900 dark:text-amber-300">
+                      Already logged with <strong>{primaryDuplicate.upvotes || 0} citizen endorsements</strong>.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleEndorseDuplicate(primaryDuplicate)}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <span>Endorse Existing (+10 Karma)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* STEP 3: DETAILS & SMART AI SCANNER */}
+          {/* STEP 3: DETAILS & CATEGORIZATION */}
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Issue Title <span className="text-red-500">*</span>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                  Step 3: Issue Details & Categorization
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Provide a concise title and description. You can click "Auto-Suggest Category" to scan your report for relevant keywords.
+                </p>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Issue Title <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  onBlur={handleDetailsBlur}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
-                  placeholder="e.g. Deep pothole causing rim punctures, or Exposed streetlight wire"
+                  placeholder="e.g. Severe pothole causing vehicular damage near 4th Cross"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
                   required
                 />
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Detailed Description <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Detailed Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  onBlur={handleDetailsBlur}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 leading-relaxed"
-                  placeholder="Describe dimensions, nearby hazards (schools, elderly care, high traffic), how long it has persisted..."
+                  placeholder="Describe the issue, approximate size, immediate danger, and duration..."
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
                   required
                 />
               </div>
 
-              {/* AI Categorization & Urgency Auto-Detection Banner */}
-              <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-blue-50 border border-teal-200/70 p-4 rounded-2xl shadow-xs">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center shadow-xs">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">
-                        Smart AI Triage & Severity Classifier
-                      </h4>
-                      <p className="text-[10px] text-slate-500">
-                        Analyzes report text against municipal hazard databases
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={runAiAnalysis}
-                    disabled={isAnalyzingAi || (!title && !description)}
-                    className="flex items-center gap-1.5 text-xs font-bold bg-white text-teal-800 hover:bg-teal-50 border border-teal-300 px-3 py-1.5 rounded-xl shadow-xs transition-all disabled:opacity-50"
-                  >
-                    {isAnalyzingAi ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
-                        <span>Analyzing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                        <span>Run AI Scan</span>
-                      </>
-                    )}
-                  </button>
+              {/* Keyword Classifier Helper */}
+              <div className="bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="text-xs text-blue-900 dark:text-blue-200">
+                  <span className="font-bold">Automated Category Matcher: </span>
+                  <span className="text-[11px] text-blue-800/80 dark:text-blue-300/80">
+                    Parse problem keywords to auto-select Category and Urgency.
+                  </span>
                 </div>
-
-                {aiReport ? (
-                  <div className="mt-3 pt-3 border-t border-teal-200/60 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-slate-600">Suggested Category:</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-teal-600 text-white">
-                        {aiReport.category}
-                      </span>
-                      <span className="text-xs text-slate-600">Urgency:</span>
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-md text-white ${
-                          aiReport.urgency === 'Emergency'
-                            ? 'bg-red-600'
-                            : aiReport.urgency === 'High'
-                            ? 'bg-amber-500'
-                            : 'bg-teal-700'
-                        }`}
-                      >
-                        {aiReport.urgency}
-                      </span>
-                      <span className="text-[11px] font-semibold text-teal-700 bg-teal-100/80 px-2 py-0.5 rounded-md">
-                        {aiReport.confidence}% AI Confidence
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-700 leading-snug">
-                      <span className="font-semibold">AI Rationale:</span> {aiReport.reasoning}
-                    </p>
-
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                      <span>Detected Signals:</span>
-                      {aiReport.detectedKeywords.map((kw, i) => (
-                        <span key={i} className="bg-white/80 border border-teal-200 px-1.5 py-0.2 rounded text-slate-700">
-                          #{kw}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500 mt-1">
-                    Type your title & description above or click "Run AI Scan" to auto-determine category and safety urgency.
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleAutoDetect}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap self-start sm:self-center shadow-xs cursor-pointer flex items-center gap-1"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Auto-Suggest Category</span>
+                </button>
               </div>
 
-              {/* Category & Urgency Pickers (User can override AI) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {triageNote && (
+                <div className="text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 p-2.5 rounded-lg flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{triageNote}</span>
+                </div>
+              )}
+
+              {/* Category & Urgency Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Category (Confirmed)
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white font-medium"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none cursor-pointer"
                   >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Urgency Level
                   </label>
                   <select
                     value={urgency}
                     onChange={(e) => setUrgency(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white font-medium"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:outline-none cursor-pointer"
                   >
-                    {URGENCIES.map((urg) => (
-                      <option key={urg} value={urg}>
-                        {urg === 'Emergency' ? '🚨 Emergency (Immediate Danger)' : urg}
-                      </option>
+                    {URGENCIES.map((u) => (
+                      <option key={u} value={u}>{u}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Reporter Contact Info */}
-              <div className="pt-2 border-t border-slate-200 space-y-2">
+              {/* Reporter Info */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800">Reporter Contact (Optional)</span>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Citizen Contact Info
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isAnonymous}
                       onChange={(e) => setIsAnonymous(e.target.checked)}
-                      className="rounded text-teal-600 focus:ring-teal-500"
+                      className="rounded text-blue-600 focus:ring-blue-500"
                     />
                     <span>Submit Anonymously</span>
                   </label>
                 </div>
 
                 {!isAnonymous && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <input
                       type="text"
                       placeholder="Your Name"
                       value={reporterName}
                       onChange={(e) => setReporterName(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
                     />
                     <input
                       type="text"
-                      placeholder="Email or Phone for SMS updates"
+                      placeholder="Email or Phone Number"
                       value={reporterContact}
                       onChange={(e) => setReporterContact(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
                     />
                   </div>
                 )}
@@ -568,123 +522,176 @@ export default function ReportWizardModal({ isOpen, onClose }) {
 
           {/* STEP 4: REVIEW & SUBMIT */}
           {step === 4 && (
-            <div className="space-y-4">
-              <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-bold text-teal-950">Ready for Municipal Dispatch</h4>
-                  <p className="text-xs text-teal-800 mt-0.5">
-                    Upon submission, a unique public tracking ticket will be generated, and your local municipal response team will be automatically alerted.
-                  </p>
-                </div>
+            <div className="space-y-4 text-xs">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                  Step 4: Confirm Your Grievance Submission
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Confirm the details below before submitting to municipal dispatch.
+                </p>
               </div>
 
-              {/* Summary Card */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={mediaUrl}
-                    alt="Issue Evidence"
-                    className="w-20 h-20 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800">
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+                <div className="flex items-start gap-3.5">
+                  {mediaUrl && (
+                    <img
+                      src={mediaUrl}
+                      alt="Thumbnail"
+                      className="w-20 h-20 object-cover rounded-lg border border-slate-300 dark:border-slate-700 flex-shrink-0"
+                    />
+                  )}
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                      {title || 'Untitled Complaint'}
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400 line-clamp-2">
+                      {description || 'No description provided.'}
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">
                         {category}
                       </span>
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-md text-white ${
-                          urgency === 'Emergency'
-                            ? 'bg-red-600'
-                            : urgency === 'High'
-                            ? 'bg-amber-500'
-                            : 'bg-teal-600'
-                        }`}
-                      >
+                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                        urgency === 'Emergency' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                        urgency === 'High' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' :
+                        'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                      }`}>
                         {urgency} Priority
                       </span>
                     </div>
-                    <h3 className="text-sm font-bold text-slate-900 leading-snug">
-                      {title || 'Untitled Civic Incident'}
-                    </h3>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                      {description || 'No description provided.'}
-                    </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
-                  <div>
-                    <span className="text-slate-400 font-medium">Location:</span>
-                    <p className="font-semibold text-slate-800 truncate">
-                      {location.address}
-                    </p>
-                    <p className="text-[11px] text-slate-500">{location.neighborhood}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 font-medium">Reporter:</span>
-                    <p className="font-semibold text-slate-800">
-                      {isAnonymous ? 'Anonymous Citizen' : (reporterName || 'Citizen Member')}
-                    </p>
-                    <p className="text-[11px] text-teal-600 font-medium">Tracking enabled</p>
-                  </div>
+                <div className="pt-2.5 border-t border-slate-200 dark:border-slate-700/60 space-y-1.5 text-slate-600 dark:text-slate-400 text-xs">
+                  <div><strong>Location:</strong> {location.address} ({location.neighborhood})</div>
+                  <div><strong>Citizen Contact:</strong> {isAnonymous ? 'Anonymous Citizen' : (reporterName || 'Citizen')}</div>
                 </div>
+              </div>
+
+              <div className="p-3 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 rounded-xl border border-blue-200 dark:border-blue-800 text-xs flex items-center gap-2">
+                <span className="text-base">ℹ️</span>
+                <span>Upon submission, this complaint will receive a unique <strong>#CIVIC Ticket ID</strong> and will be visible on the public feed and map.</span>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: SUCCESS SCREEN */}
+          {step === 5 && submittedIssue && (
+            <div className="py-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Grievance Registered Successfully!
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Your ticket has been recorded and submitted to municipal ward engineers.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 max-w-sm mx-auto text-left space-y-2.5 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700/60">
+                  <span className="text-slate-500 dark:text-slate-400">Tracking Ticket ID:</span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm">
+                    {submittedIssue.ticketId}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Category:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{submittedIssue.category}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Priority:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{submittedIssue.urgency}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Initial Status:</span>
+                  <span className="font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded">
+                    {submittedIssue.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReceiptIssue(submittedIssue);
+                  }}
+                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-300 dark:border-slate-600"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Official Receipt Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedIssue(submittedIssue);
+                    onClose();
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-sm transition-colors cursor-pointer"
+                >
+                  View Ticket Timeline →
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-xs px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                >
+                  Done
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Wizard Footer Controls */}
-        <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={() => setStep(step - 1)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </button>
-          ) : (
-            <div />
-          )}
+        {/* Modal Bottom Action Buttons */}
+        {step <= 4 && (
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700/70 flex items-center justify-between">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={() => setStep(step - 1)}
+                className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+            ) : (
+              <div />
+            )}
 
-          {step < 4 ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (step === 3 && !title.trim()) {
-                  alert('Please enter a brief title for the issue.');
-                  return;
-                }
-                setStep(step + 1);
-              }}
-              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95"
-            >
-              <span>Continue</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmitReport}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow-lg shadow-teal-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Transmitting Ticket...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Submit & Launch Ticket</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+            {step < 4 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (step === 3 && (!title.trim() || !description.trim())) {
+                    alert('Please enter both Title and Description before continuing.');
+                    return;
+                  }
+                  setStep(step + 1);
+                }}
+                className="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                <span>Next Step</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleSubmit}
+                className="flex items-center gap-1.5 text-xs text-white bg-emerald-600 hover:bg-emerald-700 font-bold px-4 py-2 rounded-lg shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <span>{isSubmitting ? 'Registering...' : 'Submit Grievance'}</span>
+                <CheckCircle className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

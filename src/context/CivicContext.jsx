@@ -3,10 +3,163 @@ import { INITIAL_ISSUES, INITIAL_NOTIFICATIONS } from '../data/mockIssues';
 
 const CivicContext = createContext();
 
-const LOCAL_STORAGE_KEY = 'civicfix_issues_v2';
-const NOTIFICATIONS_KEY = 'civicfix_notifications_v2';
+const LOCAL_STORAGE_KEY = 'civicfix_issues_bengaluru_v1';
+const NOTIFICATIONS_KEY = 'civicfix_notifications_bengaluru_v1';
+const THEME_KEY = 'civicfix_theme_preference';
+const OFFLINE_QUEUE_KEY = 'civicfix_offline_queue_v1';
+const KARMA_KEY = 'civicfix_user_karma_v1';
 
 export function CivicProvider({ children }) {
+  // Theme State: 'light' | 'dark'
+  const [theme, setTheme] = useState(() => {
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored === 'dark' || stored === 'light') {
+        return stored;
+      }
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {
+      console.warn('Failed to read theme preference from storage', e);
+    }
+    return 'light';
+  });
+
+  // Online / Offline PWA state
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [offlineQueue, setOfflineQueue] = useState(() => {
+    try {
+      const stored = localStorage.getItem(OFFLINE_QUEUE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Civic Karma Profile State
+  const [userKarma, setUserKarma] = useState(() => {
+    try {
+      const stored = localStorage.getItem(KARMA_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return {
+      points: 135,
+      reportsCount: 2,
+      endorsementsCount: 7,
+      verificationsCount: 1,
+      badges: ['ward_watchdog', 'community_champion']
+    };
+  });
+
+  // Modal States
+  const [receiptIssue, setReceiptIssue] = useState(null);
+  const [isKarmaModalOpen, setIsKarmaModalOpen] = useState(false);
+
+  // Sync Karma to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(KARMA_KEY, JSON.stringify(userKarma));
+    } catch (e) {}
+  }, [userKarma]);
+
+  // Sync Offline Queue
+  useEffect(() => {
+    try {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueue));
+    } catch (e) {}
+  }, [offlineQueue]);
+
+  // Award Karma Points Helper
+  const awardKarma = (actionType, extraPoints = 0) => {
+    setUserKarma((prev) => {
+      let addPts = extraPoints;
+      let newReports = prev.reportsCount;
+      let newEndorsements = prev.endorsementsCount;
+      let newVerifications = prev.verificationsCount;
+
+      if (actionType === 'report') {
+        addPts = addPts || 50;
+        newReports += 1;
+      } else if (actionType === 'endorse') {
+        addPts = addPts || 10;
+        newEndorsements += 1;
+      } else if (actionType === 'verify') {
+        addPts = addPts || 30;
+        newVerifications += 1;
+      }
+
+      const newBadges = [...prev.badges];
+      if (newReports >= 2 && !newBadges.includes('ward_watchdog')) newBadges.push('ward_watchdog');
+      if (newEndorsements >= 5 && !newBadges.includes('community_champion')) newBadges.push('community_champion');
+      if (newVerifications >= 1 && !newBadges.includes('ground_auditor')) newBadges.push('ground_auditor');
+      if (newReports >= 5 && !newBadges.includes('civic_sentinel')) newBadges.push('civic_sentinel');
+
+      return {
+        points: prev.points + addPts,
+        reportsCount: newReports,
+        endorsementsCount: newEndorsements,
+        verificationsCount: newVerifications,
+        badges: newBadges
+      };
+    });
+  };
+
+  // Online / Offline Listeners & Queue Flush
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Flush offline queue if any
+      try {
+        const stored = localStorage.getItem(OFFLINE_QUEUE_KEY);
+        const queued = stored ? JSON.parse(stored) : [];
+        if (queued.length > 0) {
+          setIssues((prev) => [...queued, ...prev]);
+          setOfflineQueue([]);
+          localStorage.removeItem(OFFLINE_QUEUE_KEY);
+          addToast(`Synced ${queued.length} offline grievances to municipal dispatch!`, 'success');
+        } else {
+          addToast('Internet restored. Live dispatch feed active.', 'info');
+        }
+      } catch (e) {}
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      addToast('Offline Mode: Grievance submissions will be stored locally and synced when connection resumes.', 'warning');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+      const root = document.documentElement;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        root.setAttribute('data-theme', 'dark');
+        root.style.colorScheme = 'dark';
+      } else {
+        root.classList.remove('dark');
+        root.setAttribute('data-theme', 'light');
+        root.style.colorScheme = 'light';
+      }
+    } catch (e) {
+      console.error('Failed to apply theme class', e);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // 1. Issues State
   const [issues, setIssues] = useState(() => {
     try {
@@ -115,10 +268,10 @@ export function CivicProvider({ children }) {
       urgency: newIssueData.urgency || 'Medium',
       status: 'Submitted',
       location: {
-        lat: newIssueData.location?.lat || 40.7128,
-        lng: newIssueData.location?.lng || -74.0060,
-        address: newIssueData.location?.address || 'Reported Location',
-        neighborhood: newIssueData.location?.neighborhood || 'City Center',
+        lat: newIssueData.location?.lat || 12.9716,
+        lng: newIssueData.location?.lng || 77.5946,
+        address: newIssueData.location?.address || 'MG Road / City Center, Bengaluru',
+        neighborhood: newIssueData.location?.neighborhood || 'Central Bengaluru',
         landmark: newIssueData.location?.landmark || ''
       },
       mediaUrl: newIssueData.mediaUrl || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
@@ -133,7 +286,7 @@ export function CivicProvider({ children }) {
       },
       upvotes: 1,
       hasUpvoted: true,
-      department: newIssueData.department || 'Department of Public Works',
+      department: newIssueData.department || 'BBMP Road Infrastructure',
       assignedTeam: null,
       eta: 'Awaiting triage & scheduling',
       timeline: [
@@ -142,34 +295,28 @@ export function CivicProvider({ children }) {
           status: 'Submitted',
           timestamp: nowIso,
           title: 'Issue Logged by Citizen',
-          description: 'Ticket received and queued for automated AI classification and municipal dispatch.',
+          description: 'Ticket received and queued for automated category triage and municipal dispatch.',
           actor: newIssueData.isAnonymous ? 'Anonymous Citizen' : (newIssueData.reporter?.name || 'Citizen'),
           role: 'Citizen'
         }
       ],
       comments: [],
-      aiMetadata: newIssueData.aiMetadata || {
+      triageMetadata: newIssueData.triageMetadata || newIssueData.aiMetadata || {
         confidence: 94,
         detectedKeywords: ['citizen report'],
-        reasoning: 'AI verified submission location and context parameters.'
+        reasoning: 'Automated triage verified submission location and context parameters.'
       }
     };
 
-    setIssues((prev) => [createdIssue, ...prev]);
+    if (!isOnline) {
+      setOfflineQueue((prev) => [createdIssue, ...prev]);
+      addToast(`Offline: Issue ${ticketId} stored locally. It will auto-sync when connection restores.`, 'warning');
+    } else {
+      setIssues((prev) => [createdIssue, ...prev]);
+      addToast(`Issue ${ticketId} successfully submitted! Tracking is now active.`, 'success');
+    }
 
-    // Add alert notification
-    const newNotif = {
-      id: 'notif-' + Date.now(),
-      title: 'New Issue Logged',
-      message: `${createdIssue.title} (${createdIssue.ticketId}) filed in ${createdIssue.location.neighborhood}.`,
-      timestamp: 'Just now',
-      type: createdIssue.urgency === 'Emergency' ? 'high_priority' : 'status_update',
-      read: false,
-      ticketId: createdIssue.ticketId
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    addToast(`Issue ${ticketId} successfully submitted! Tracking is now active.`, 'success');
+    awardKarma('report', 50);
     return createdIssue;
   };
 
@@ -181,6 +328,9 @@ export function CivicProvider({ children }) {
           const isUpvoted = !item.hasUpvoted;
           const delta = isUpvoted ? 1 : -1;
           const newVotes = Math.max(0, item.upvotes + delta);
+          if (isUpvoted) {
+            awardKarma('endorse', 10);
+          }
           addToast(
             isUpvoted
               ? `Endorsed ${item.ticketId}! Priority boosted in municipal queue.`
@@ -372,7 +522,8 @@ export function CivicProvider({ children }) {
               actor: feedback.citizenName,
               role: 'Citizen'
             });
-            addToast(`Thank you! Verified with a ${rating}-star rating.`, 'success');
+            awardKarma('verify', 30);
+            addToast(`Thank you! Verified with a ${rating}-star rating. +30 Civic Karma earned!`, 'success');
           }
 
           return {
@@ -408,6 +559,17 @@ export function CivicProvider({ children }) {
   return (
     <CivicContext.Provider
       value={{
+        theme,
+        setTheme,
+        toggleTheme,
+        isOnline,
+        offlineQueue,
+        userKarma,
+        awardKarma,
+        receiptIssue,
+        setReceiptIssue,
+        isKarmaModalOpen,
+        setIsKarmaModalOpen,
         issues,
         notifications,
         unreadNotifCount,
